@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { School, Users, Calendar, LogOut, Plus } from "lucide-react";
+import { School, Users, Calendar, LogOut, Plus, Shield } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
@@ -125,7 +125,7 @@ const Dashboard = () => {
           {userRole === "super_admin" && (
             <>
               <div className="grid md:grid-cols-3 gap-6">
-                <Card className="p-6 space-y-2">
+                <Card className="p-6 space-y-2 cursor-pointer hover:shadow-lg transition-all" onClick={() => navigate("/schools")}>
                   <div className="flex items-center justify-between">
                     <School className="h-8 w-8 text-primary" />
                     <span className="text-3xl font-bold">{schools.length}</span>
@@ -133,20 +133,20 @@ const Dashboard = () => {
                   <p className="text-sm text-muted-foreground">Établissements</p>
                 </Card>
 
-                <Card className="p-6 space-y-2">
+                <Card className="p-6 space-y-2 cursor-pointer hover:shadow-lg transition-all" onClick={() => navigate("/admins")}>
                   <div className="flex items-center justify-between">
-                    <Users className="h-8 w-8 text-accent" />
-                    <span className="text-3xl font-bold">0</span>
+                    <Shield className="h-8 w-8 text-accent" />
+                    <span className="text-3xl font-bold">Admins</span>
                   </div>
-                  <p className="text-sm text-muted-foreground">Utilisateurs</p>
+                  <p className="text-sm text-muted-foreground">Administrateurs</p>
                 </Card>
 
-                <Card className="p-6 space-y-2">
+                <Card className="p-6 space-y-2 cursor-pointer hover:shadow-lg transition-all" onClick={() => navigate("/teachers")}>
                   <div className="flex items-center justify-between">
-                    <Calendar className="h-8 w-8 text-secondary" />
-                    <span className="text-3xl font-bold">0</span>
+                    <Users className="h-8 w-8 text-secondary" />
+                    <span className="text-3xl font-bold">Professeurs</span>
                   </div>
-                  <p className="text-sm text-muted-foreground">Emplois du temps</p>
+                  <p className="text-sm text-muted-foreground">Enseignants</p>
                 </Card>
               </div>
 
@@ -154,7 +154,7 @@ const Dashboard = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-2xl font-bold">Établissements</h2>
-                  <Button className="gap-2">
+                  <Button className="gap-2" onClick={() => navigate("/schools")}>
                     <Plus className="h-4 w-4" />
                     Nouvel établissement
                   </Button>

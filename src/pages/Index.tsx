@@ -46,9 +46,9 @@ const Index = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-            <Link to="/setup">
+            <Link to="/register-teacher">
               <Button size="lg" className="gap-2 bg-gradient-primary hover:opacity-90 transition-opacity">
-                Commencer maintenant
+                Inscription Professeur
                 <ArrowRight className="h-5 w-5" />
               </Button>
             </Link>

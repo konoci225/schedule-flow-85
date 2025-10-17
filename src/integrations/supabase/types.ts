@@ -14,31 +14,93 @@ export type Database = {
   }
   public: {
     Tables: {
+      invitations: {
+        Row: {
+          accepted: boolean | null
+          created_at: string | null
+          created_by: string
+          email: string
+          expires_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          school_id: string
+          token: string
+        }
+        Insert: {
+          accepted?: boolean | null
+          created_at?: string | null
+          created_by: string
+          email: string
+          expires_at: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          school_id: string
+          token: string
+        }
+        Update: {
+          accepted?: boolean | null
+          created_at?: string | null
+          created_by?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          school_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invitations_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
+          address: string | null
+          birth_date: string | null
+          birth_place: string | null
           created_at: string | null
           first_name: string
+          gender: Database["public"]["Enums"]["gender"] | null
           id: string
           last_name: string
+          matricule: string | null
           phone: string | null
+          photo_url: string | null
           school_id: string | null
           updated_at: string | null
         }
         Insert: {
+          address?: string | null
+          birth_date?: string | null
+          birth_place?: string | null
           created_at?: string | null
           first_name: string
+          gender?: Database["public"]["Enums"]["gender"] | null
           id: string
           last_name: string
+          matricule?: string | null
           phone?: string | null
+          photo_url?: string | null
           school_id?: string | null
           updated_at?: string | null
         }
         Update: {
+          address?: string | null
+          birth_date?: string | null
+          birth_place?: string | null
           created_at?: string | null
           first_name?: string
+          gender?: Database["public"]["Enums"]["gender"] | null
           id?: string
           last_name?: string
+          matricule?: string | null
           phone?: string | null
+          photo_url?: string | null
           school_id?: string | null
           updated_at?: string | null
         }
@@ -121,6 +183,154 @@ export type Database = {
         }
         Relationships: []
       }
+      subjects: {
+        Row: {
+          code: string
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          school_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          school_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          school_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subjects_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teacher_subjects: {
+        Row: {
+          created_at: string | null
+          id: string
+          subject_id: string
+          teacher_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          subject_id: string
+          teacher_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          subject_id?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_subjects_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_subjects_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teachers: {
+        Row: {
+          address: string | null
+          birth_date: string | null
+          birth_place: string | null
+          created_at: string | null
+          diploma: string | null
+          email: string | null
+          first_name: string
+          gender: Database["public"]["Enums"]["gender"]
+          id: string
+          is_approved: boolean | null
+          last_name: string
+          matricule: string
+          phone: string
+          photo_url: string | null
+          qualifications: string | null
+          school_id: string
+          status: Database["public"]["Enums"]["teacher_status"]
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          address?: string | null
+          birth_date?: string | null
+          birth_place?: string | null
+          created_at?: string | null
+          diploma?: string | null
+          email?: string | null
+          first_name: string
+          gender: Database["public"]["Enums"]["gender"]
+          id?: string
+          is_approved?: boolean | null
+          last_name: string
+          matricule: string
+          phone: string
+          photo_url?: string | null
+          qualifications?: string | null
+          school_id: string
+          status: Database["public"]["Enums"]["teacher_status"]
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          address?: string | null
+          birth_date?: string | null
+          birth_place?: string | null
+          created_at?: string | null
+          diploma?: string | null
+          email?: string | null
+          first_name?: string
+          gender?: Database["public"]["Enums"]["gender"]
+          id?: string
+          is_approved?: boolean | null
+          last_name?: string
+          matricule?: string
+          phone?: string
+          photo_url?: string | null
+          qualifications?: string | null
+          school_id?: string
+          status?: Database["public"]["Enums"]["teacher_status"]
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teachers_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -172,12 +382,14 @@ export type Database = {
     }
     Enums: {
       app_role: "super_admin" | "school_admin" | "teacher"
+      gender: "male" | "female" | "other"
       school_type:
         | "primary"
         | "middle_school"
         | "high_school"
         | "university"
         | "vocational"
+      teacher_status: "permanent" | "contract" | "substitute"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -306,6 +518,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["super_admin", "school_admin", "teacher"],
+      gender: ["male", "female", "other"],
       school_type: [
         "primary",
         "middle_school",
@@ -313,6 +526,7 @@ export const Constants = {
         "university",
         "vocational",
       ],
+      teacher_status: ["permanent", "contract", "substitute"],
     },
   },
 } as const
