@@ -112,18 +112,30 @@ const Setup = () => {
       if (authError) throw authError;
 
       if (authData.user) {
-        await supabase.from("user_roles").insert({
+        // Insert super_admin role
+        const { error: roleError } = await supabase.from("user_roles").insert({
           user_id: authData.user.id,
           role: "super_admin",
         });
 
-        await supabase
+        if (roleError) {
+          console.error("Error creating role:", roleError);
+          throw new Error("Impossible de créer le rôle super_admin");
+        }
+
+        // Update setup config
+        const { error: configError } = await supabase
           .from("setup_config")
           .update({
             first_setup_completed: true,
             primary_super_admin_id: authData.user.id,
           })
           .eq("first_setup_completed", false);
+
+        if (configError) {
+          console.error("Error updating config:", configError);
+          throw new Error("Impossible de finaliser la configuration");
+        }
 
         toast({
           title: "Configuration terminée",
