@@ -1,8 +1,51 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, School, Users, Calendar, Shield } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
+  const navigate = useNavigate();
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    checkSetupStatus();
+  }, []);
+
+  const checkSetupStatus = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("setup_config")
+        .select("first_setup_completed")
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error("Error checking setup:", error);
+      }
+
+      // Si aucune configuration ou setup non complété, rediriger vers setup
+      if (!data || !data.first_setup_completed) {
+        navigate("/setup/super-admin");
+        return;
+      }
+    } catch (error) {
+      console.error("Setup check error:", error);
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  if (checking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-subtle">
+        <div className="text-center space-y-4">
+          <div className="h-16 w-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-muted-foreground">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-subtle">
       {/* Header */}

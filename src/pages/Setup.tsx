@@ -30,7 +30,7 @@ const Setup = () => {
       const { data, error } = await supabase
         .from("setup_config")
         .select("first_setup_completed")
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
 
