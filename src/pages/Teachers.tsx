@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { UserCheck, UserX, Users } from "lucide-react";
+import { UserCheck, UserX, Users, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Teachers() {
+  const navigate = useNavigate();
   const [teachers, setTeachers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -170,6 +172,13 @@ export default function Teachers() {
 
   return (
     <div className="p-8">
+      <div className="mb-6">
+        <Button variant="ghost" onClick={() => navigate("/dashboard")} className="gap-2 mb-4">
+          <ArrowLeft className="h-4 w-4" />
+          Retour au tableau de bord
+        </Button>
+      </div>
+      
       <div className="mb-8">
         <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
           Gestion des Professeurs

@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Building2, Mail, Phone, Globe } from "lucide-react";
+import { Plus, Building2, Mail, Phone, Globe, ArrowLeft } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 
 export default function Schools() {
+  const navigate = useNavigate();
   const [schools, setSchools] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -104,6 +106,13 @@ export default function Schools() {
 
   return (
     <div className="p-8">
+      <div className="mb-6">
+        <Button variant="ghost" onClick={() => navigate("/dashboard")} className="gap-2 mb-4">
+          <ArrowLeft className="h-4 w-4" />
+          Retour au tableau de bord
+        </Button>
+      </div>
+      
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
