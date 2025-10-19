@@ -84,56 +84,52 @@ export default function Admins() {
     e.preventDefault();
 
     try {
-      // Create invitation token
-      const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
-      const expiresAt = new Date();
-      expiresAt.setHours(expiresAt.getHours() + 72);
-
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
         throw new Error("Utilisateur non authentifié");
       }
 
-      // Get school name for email
-      const school = schools.find(s => s.id === formData.school_id);
+      // Use Supabase's native invitation system via edge function
+      const { data, error: inviteError } = await supabase.functions.invoke('invite-school-admin', {
+        body: {
+          email: formData.email,
+          school_id: formData.school_id,
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          phone: formData.phone,
+        }
+      });
+
+      if (inviteError) {
+        console.error('Invitation error:', inviteError);
+        throw new Error("Erreur lors de l'envoi de l'invitation");
+      }
+
+      // Create invitation record for tracking
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 72);
       
-      // Insert invitation
-      const { error: inviteError } = await supabase
+      const { error: recordError } = await supabase
         .from("invitations")
         .insert({
           email: formData.email,
           school_id: formData.school_id,
           role: "school_admin",
-          token,
+          token: crypto.randomUUID(),
           expires_at: expiresAt.toISOString(),
           created_by: user.id,
         });
 
-      if (inviteError) throw inviteError;
-
-      // Send invitation email via edge function
-      const { error: emailError } = await supabase.functions.invoke('send-admin-invitation', {
-        body: {
-          email: formData.email,
-          school_name: school?.name || 'votre établissement',
-          token: token,
-        }
-      });
-
-      if (emailError) {
-        console.error('Email error:', emailError);
-        toast({
-          title: "Invitation créée",
-          description: "L'invitation a été créée mais l'email n'a pas pu être envoyé. Veuillez vérifier la configuration RESEND_API_KEY.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Invitation envoyée",
-          description: `Une invitation a été envoyée à ${formData.email}. L'administrateur devra créer son compte dans les 72 heures.`,
-        });
+      if (recordError) {
+        console.error('Record error:', recordError);
+        // Don't fail if we can't create the record, the invitation was sent
       }
+
+      toast({
+        title: "Invitation envoyée",
+        description: `Une invitation a été envoyée à ${formData.email}. L'administrateur recevra un email pour créer son compte.`,
+      });
 
       setDialogOpen(false);
       setFormData({
@@ -143,6 +139,7 @@ export default function Admins() {
         phone: "",
         school_id: "",
       });
+      fetchAdmins();
       fetchInvitations();
     } catch (error: any) {
       toast({

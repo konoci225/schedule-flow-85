@@ -1,1 +1,4 @@
 project_id = "ghismfqktbixljyrhbbu"
+
+[functions.invite-school-admin]
+verify_jwt = true
