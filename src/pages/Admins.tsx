@@ -52,40 +52,58 @@ export default function Admins() {
   const fetchAdmins = async () => {
     console.log("🔍 Starting fetchAdmins...");
     
-    const { data, error } = await supabase
+    // 1. Récupérer les user_roles avec leurs écoles
+    const { data: userRolesData, error: userRolesError } = await supabase
       .from("user_roles")
-      .select(`
-        *,
-        profiles (first_name, last_name, phone),
-        schools (name, type)
-      `)
+      .select("*, schools (name, type)")
       .eq("role", "school_admin")
       .order("created_at", { ascending: false });
 
-    console.log("📊 fetchAdmins result:", { error, data, count: data?.length });
-    
-    let debug = `=== DEBUG ADMINS ===\n`;
-    debug += `Error: ${error ? JSON.stringify(error) : "null"}\n`;
-    debug += `Data count: ${data?.length || 0}\n\n`;
-    
-    if (data) {
-      data.forEach((admin, index) => {
-        debug += `Admin ${index + 1}:\n`;
-        debug += `  - user_id: ${admin.user_id}\n`;
-        debug += `  - school_id: ${admin.school_id}\n`;
-        debug += `  - has_profile: ${!!admin.profiles}\n`;
-        debug += `  - profile: ${JSON.stringify(admin.profiles)}\n`;
-        debug += `  - has_school: ${!!admin.schools}\n`;
-        debug += `  - school: ${admin.schools?.name}\n\n`;
-      });
+    if (userRolesError) {
+      console.error("Error fetching user_roles:", userRolesError);
+      setLoading(false);
+      return;
     }
+
+    console.log("📊 user_roles data:", userRolesData);
+
+    // 2. Pour chaque user_role, récupérer le profile correspondant
+    const adminsWithProfiles = await Promise.all(
+      (userRolesData || []).map(async (userRole) => {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("first_name, last_name, phone")
+          .eq("id", userRole.user_id)
+          .single();
+
+        return {
+          ...userRole,
+          profiles: profile,
+        };
+      })
+    );
+
+    console.log("📊 admins with profiles:", adminsWithProfiles);
+
+    let debug = `=== DEBUG ADMINS ===\n`;
+    debug += `User roles count: ${userRolesData?.length || 0}\n\n`;
+    
+    adminsWithProfiles.forEach((admin, index) => {
+      debug += `Admin ${index + 1}:\n`;
+      debug += `  - user_id: ${admin.user_id}\n`;
+      debug += `  - school: ${admin.schools?.name}\n`;
+      debug += `  - has_profile: ${!!admin.profiles}\n`;
+      if (admin.profiles) {
+        debug += `  - name: ${admin.profiles.first_name} ${admin.profiles.last_name}\n`;
+        debug += `  - phone: ${admin.profiles.phone}\n`;
+      }
+      debug += `\n`;
+    });
     
     setDebugInfo(debug);
     console.log(debug);
 
-    if (!error && data) {
-      setAdmins(data);
-    }
+    setAdmins(adminsWithProfiles);
     setLoading(false);
   };
 
@@ -201,7 +219,7 @@ export default function Admins() {
       {debugInfo && (
         <Alert className="mb-6">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Debug Info (ouvrir la console pour plus de détails)</AlertTitle>
+          <AlertTitle>Debug Info</AlertTitle>
           <AlertDescription>
             <pre className="text-xs mt-2 overflow-auto max-h-48 whitespace-pre-wrap">
               {debugInfo}
@@ -394,10 +412,6 @@ export default function Admins() {
 
                       <div className="text-xs text-muted-foreground">
                         Créé le {new Date(admin.created_at).toLocaleDateString()}
-                      </div>
-                      
-                      <div className="text-xs text-muted-foreground">
-                        User ID: {admin.user_id.substring(0, 8)}...
                       </div>
                     </CardContent>
                   </Card>
