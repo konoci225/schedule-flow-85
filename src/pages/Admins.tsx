@@ -98,6 +98,7 @@ export default function Admins() {
           first_name: formData.first_name,
           last_name: formData.last_name,
           phone: formData.phone,
+          redirect_to: `${window.location.origin}/set-password`,
         }
       });
 

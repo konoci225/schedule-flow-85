@@ -12,6 +12,7 @@ interface InvitationRequest {
   first_name?: string;
   last_name?: string;
   phone?: string;
+  redirect_to?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -33,7 +34,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
 
-    const { email, school_id, first_name, last_name, phone }: InvitationRequest = await req.json();
+    const { email, school_id, first_name, last_name, phone, redirect_to }: InvitationRequest = await req.json();
 
     console.log('Inviting user:', { email, school_id });
 
@@ -50,7 +51,7 @@ const handler = async (req: Request): Promise<Response> => {
         last_name: last_name || '',
         phone: phone || '',
       },
-      redirectTo: `${Deno.env.get('SUPABASE_URL')}/auth/v1/verify`,
+      redirectTo: redirect_to || `${Deno.env.get('SUPABASE_URL')}/auth/v1/verify`,
     });
 
     if (inviteError) {

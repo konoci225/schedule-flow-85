@@ -11,6 +11,7 @@ import Schools from "./pages/Schools";
 import Teachers from "./pages/Teachers";
 import Admins from "./pages/Admins";
 import TeacherRegistration from "./pages/TeacherRegistration";
+import SetPassword from "./pages/SetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,6 +26,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/setup/super-admin" element={<Setup />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/set-password" element={<SetPassword />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/schools" element={<Schools />} />
           <Route path="/teachers" element={<Teachers />} />
