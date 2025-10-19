@@ -38,7 +38,8 @@ export default function Admins() {
   const fetchAllData = async () => {
     setLoading(true);
     await Promise.all([
-      fetchAdminsAndInvitations(),
+      fetchAdmins(),
+      fetchInvitations(),
       fetchSchools()
     ]);
     setLoading(false);
@@ -56,10 +57,10 @@ export default function Admins() {
     }
   };
 
-  const fetchAdminsAndInvitations = async () => {
-    console.log("🔍 Starting fetchAdminsAndInvitations...");
+  const fetchAdmins = async () => {
+    console.log("🔍 Starting fetchAdmins...");
     
-    // 1. Récupérer TOUS les admins avec leurs profils et emails
+    // 1. Récupérer les user_roles avec leurs écoles
     const { data: userRolesData, error: userRolesError } = await supabase
       .from("user_roles")
       .select("*, schools (name, type)")
@@ -71,41 +72,56 @@ export default function Admins() {
       return;
     }
 
-    // 2. Récupérer les profils et emails des admins
+    console.log("📊 user_roles data:", userRolesData);
+
+    // 2. Pour chaque user_role, récupérer le profile correspondant
     const adminsWithProfiles = await Promise.all(
       (userRolesData || []).map(async (userRole) => {
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from("profiles")
-          .select("first_name, last_name, phone, email")
+          .select("first_name, last_name, phone")
           .eq("id", userRole.user_id)
           .single();
 
-        // Récupérer aussi l'email depuis auth.users si pas dans profiles
-        const { data: authData } = await supabase
-          .from("auth.users")
-          .select("email")
-          .eq("id", userRole.user_id)
-          .single();
+        if (profileError) {
+          console.error(`Error fetching profile for ${userRole.user_id}:`, profileError);
+        }
 
         return {
           ...userRole,
           profiles: profile,
-          email: profile?.email || authData?.email || null
         };
       })
     );
 
-    console.log("📊 Admins with profiles:", adminsWithProfiles);
+    console.log("📊 admins with profiles:", adminsWithProfiles);
 
-    // 3. Créer une liste des emails des admins existants
-    const existingAdminEmails = adminsWithProfiles
-      .map(admin => admin.email)
-      .filter(email => email !== null);
+    // 3. Debug info
+    let debug = `=== DEBUG ADMINS ===\n`;
+    debug += `User roles count: ${userRolesData?.length || 0}\n\n`;
+    
+    adminsWithProfiles.forEach((admin, index) => {
+      debug += `Admin ${index + 1}:\n`;
+      debug += `  - user_id: ${admin.user_id}\n`;
+      debug += `  - school: ${admin.schools?.name}\n`;
+      debug += `  - has_profile: ${!!admin.profiles}\n`;
+      if (admin.profiles) {
+        debug += `  - name: ${admin.profiles.first_name} ${admin.profiles.last_name}\n`;
+        debug += `  - phone: ${admin.profiles.phone}\n`;
+      }
+      debug += `\n`;
+    });
+    
+    setDebugInfo(debug);
+    console.log(debug);
 
-    console.log("📧 Existing admin emails:", existingAdminEmails);
+    setAdmins(adminsWithProfiles);
+  };
 
-    // 4. Récupérer TOUTES les invitations
-    const { data: invitationsData, error: invitationsError } = await supabase
+  const fetchInvitations = async () => {
+    console.log("🔍 Starting fetchInvitations...");
+    
+    const { data, error } = await supabase
       .from("invitations")
       .select(`
         *,
@@ -114,65 +130,33 @@ export default function Admins() {
       .eq("role", "school_admin")
       .order("created_at", { ascending: false });
 
-    if (invitationsError) {
-      console.error("Error fetching invitations:", invitationsError);
+    console.log("📊 fetchInvitations result:", { error, data, count: data?.length });
+
+    if (error) {
+      console.error("Error fetching invitations:", error);
       setInvitations([]);
-    } else {
-      // 5. FILTRER les invitations pour exclure celles déjà acceptées
-      const pendingInvitations = (invitationsData || []).filter(invitation => {
-        // Garder seulement si :
-        // - accepted = false ET
-        // - l'email n'existe pas dans les admins existants ET
-        // - l'invitation n'est pas expirée
-        const isExpired = new Date(invitation.expires_at) < new Date();
-        const emailExistsInAdmins = existingAdminEmails.includes(invitation.email.toLowerCase());
-        
-        console.log(`📋 Invitation ${invitation.email}:`, {
-          accepted: invitation.accepted,
-          expired: isExpired,
-          existsInAdmins: emailExistsInAdmins
-        });
-
-        return !invitation.accepted && !emailExistsInAdmins && !isExpired;
-      });
-
-      console.log("✅ Filtered pending invitations:", pendingInvitations);
-      setInvitations(pendingInvitations);
-
-      // 6. Nettoyer automatiquement les invitations obsolètes (optionnel)
-      const obsoleteInvitations = invitationsData?.filter(inv => 
-        existingAdminEmails.includes(inv.email.toLowerCase()) && !inv.accepted
-      );
-      
-      if (obsoleteInvitations && obsoleteInvitations.length > 0) {
-        console.log("🧹 Found obsolete invitations to clean:", obsoleteInvitations);
-        // Marquer comme acceptées les invitations obsolètes
-        for (const inv of obsoleteInvitations) {
-          await supabase
-            .from("invitations")
-            .update({ accepted: true })
-            .eq("id", inv.id);
-        }
-      }
+      return;
     }
 
-    // 7. Debug info
-    let debug = `=== DEBUG ADMINS ===\n`;
-    debug += `Total admins: ${adminsWithProfiles.length}\n`;
-    debug += `Pending invitations: ${invitations.length}\n\n`;
-    
-    adminsWithProfiles.forEach((admin, index) => {
-      debug += `Admin ${index + 1}:\n`;
-      debug += `  - user_id: ${admin.user_id}\n`;
-      debug += `  - email: ${admin.email || '[No email]'}\n`;
-      debug += `  - school: ${admin.schools?.name}\n`;
-      debug += `  - name: ${admin.profiles?.first_name || '[?]'} ${admin.profiles?.last_name || '[?]'}\n\n`;
-    });
-    
-    setDebugInfo(debug);
-    console.log(debug);
+    // Filtrer pour garder seulement les invitations vraiment en attente
+    const pendingInvitations = (data || []).filter(invitation => {
+      // Une invitation est vraiment en attente si:
+      // - elle n'est pas acceptée
+      // - elle n'est pas expirée
+      const isExpired = new Date(invitation.expires_at) < new Date();
+      const isPending = !invitation.accepted && !isExpired;
+      
+      console.log(`📋 Invitation ${invitation.email}:`, {
+        accepted: invitation.accepted,
+        expired: isExpired,
+        pending: isPending
+      });
 
-    setAdmins(adminsWithProfiles);
+      return isPending;
+    });
+
+    console.log("✅ Filtered pending invitations:", pendingInvitations);
+    setInvitations(pendingInvitations);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -185,18 +169,7 @@ export default function Admins() {
         throw new Error("Utilisateur non authentifié");
       }
 
-      // Vérifier si l'email n'est pas déjà utilisé
-      const { data: existingProfile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("email", formData.email.toLowerCase())
-        .single();
-
-      if (existingProfile) {
-        throw new Error("Cet email est déjà utilisé par un autre compte");
-      }
-
-      // Vérifier si une invitation existe déjà
+      // Vérifier si une invitation existe déjà pour cet email
       const { data: existingInvitation } = await supabase
         .from("invitations")
         .select("id, accepted, expires_at")
@@ -204,8 +177,11 @@ export default function Admins() {
         .eq("school_id", formData.school_id)
         .single();
 
-      if (existingInvitation && !existingInvitation.accepted && new Date(existingInvitation.expires_at) > new Date()) {
-        throw new Error("Une invitation est déjà en attente pour cet email et cette école");
+      if (existingInvitation && !existingInvitation.accepted) {
+        const isExpired = new Date(existingInvitation.expires_at) < new Date();
+        if (!isExpired) {
+          throw new Error("Une invitation est déjà en attente pour cet email dans cette école");
+        }
       }
 
       // Envoyer l'invitation
@@ -228,7 +204,7 @@ export default function Admins() {
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 72);
       
-      // Si une ancienne invitation existe, la mettre à jour, sinon créer une nouvelle
+      // Si une ancienne invitation existe, la mettre à jour
       if (existingInvitation) {
         await supabase
           .from("invitations")
@@ -240,6 +216,7 @@ export default function Admins() {
           })
           .eq("id", existingInvitation.id);
       } else {
+        // Sinon créer une nouvelle invitation
         await supabase
           .from("invitations")
           .insert({
@@ -490,13 +467,6 @@ export default function Admins() {
                         <div className="flex items-center gap-2 text-sm">
                           <Phone className="h-4 w-4 text-muted-foreground" />
                           <span>{admin.profiles.phone}</span>
-                        </div>
-                      )}
-
-                      {admin.email && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <Mail className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-xs">{admin.email}</span>
                         </div>
                       )}
 
