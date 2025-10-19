@@ -65,7 +65,7 @@ export default function Admins() {
   };
 
   const fetchInvitations = async () => {
-    // Récupérer toutes les invitations non acceptées
+    // VERSION SIMPLIFIÉE : Récupérer UNIQUEMENT les invitations non acceptées
     const { data: invitationsData, error } = await supabase
       .from("invitations")
       .select(`
@@ -73,52 +73,16 @@ export default function Admins() {
         schools (name, type)
       `)
       .eq("role", "school_admin")
-      .eq("accepted", false)
+      .eq("accepted", false)  // Seulement celles qui sont vraiment en attente
       .order("created_at", { ascending: false });
 
     if (error) {
       console.error("Error fetching invitations:", error);
-      return;
-    }
-
-    if (!invitationsData) {
       setInvitations([]);
       return;
     }
 
-    // Filtrer les invitations : garder seulement celles où l'email n'a PAS encore de compte activé
-    const filteredInvitations = [];
-    
-    for (const invitation of invitationsData) {
-      // Vérifier si un user_role existe pour cet email
-      const { data: existingAdmin } = await supabase
-        .from("user_roles")
-        .select("id, user_id")
-        .eq("role", "school_admin")
-        .eq("school_id", invitation.school_id)
-        .limit(1);
-
-      // Si un admin existe, vérifier si son email correspond
-      if (existingAdmin && existingAdmin.length > 0) {
-        // Récupérer l'email de l'utilisateur via auth
-        const { data: { user } } = await supabase.auth.admin.getUserById(existingAdmin[0].user_id);
-        
-        if (user && user.email === invitation.email) {
-          // Cet admin a déjà accepté son invitation, on le skip
-          // Optionnel : mettre à jour accepted = true dans invitations
-          await supabase
-            .from("invitations")
-            .update({ accepted: true })
-            .eq("id", invitation.id);
-          continue;
-        }
-      }
-
-      // Sinon, l'invitation est toujours en attente
-      filteredInvitations.push(invitation);
-    }
-
-    setInvitations(filteredInvitations);
+    setInvitations(invitationsData || []);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
