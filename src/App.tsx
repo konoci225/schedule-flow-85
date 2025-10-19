@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import Schools from "./pages/Schools";
 import Teachers from "./pages/Teachers";
 import Admins from "./pages/Admins";
+import MigrationInvitations from "./pages/MigrationInvitations";
 import TeacherRegistration from "./pages/TeacherRegistration";
 import SetPassword from "./pages/SetPassword";
 import NotFound from "./pages/NotFound";
@@ -31,6 +32,7 @@ const App = () => (
           <Route path="/schools" element={<Schools />} />
           <Route path="/teachers" element={<Teachers />} />
           <Route path="/admins" element={<Admins />} />
+          <Route path="/migration-invitations" element={<MigrationInvitations />} />
           <Route path="/register-teacher" element={<TeacherRegistration />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
