@@ -1,11 +1,25 @@
+// src/pages/Admins.tsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Shield, Mail, Phone, Building2, ArrowLeft, Clock } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -47,14 +61,17 @@ export default function Admins() {
     }
   };
 
+  // ✅ Corrigé: LEFT JOIN implicite sur profiles (supprime le !inner)
   const fetchAdmins = async () => {
     const { data, error } = await supabase
       .from("user_roles")
-      .select(`
+      .select(
+        `
         *,
-        profiles!inner (first_name, last_name, phone),
+        profiles (first_name, last_name, phone),
         schools (name, type)
-      `)
+      `
+      )
       .eq("role", "school_admin")
       .order("created_at", { ascending: false });
 
@@ -64,113 +81,82 @@ export default function Admins() {
     setLoading(false);
   };
 
+  // ✅ Corrigé: suppression de l’usage de supabase.auth.admin.getUserById côté client
+  // On affiche simplement les invitations non acceptées.
   const fetchInvitations = async () => {
-    // Récupérer toutes les invitations non acceptées
-    const { data: invitationsData, error } = await supabase
+    const { data, error } = await supabase
       .from("invitations")
-      .select(`
+      .select(
+        `
         *,
         schools (name, type)
-      `)
+      `
+      )
       .eq("role", "school_admin")
       .eq("accepted", false)
       .order("created_at", { ascending: false });
 
     if (error) {
       console.error("Error fetching invitations:", error);
-      return;
-    }
-
-    if (!invitationsData) {
       setInvitations([]);
       return;
     }
-
-    // Filtrer les invitations : garder seulement celles où l'email n'a PAS encore de compte activé
-    const filteredInvitations = [];
-    
-    for (const invitation of invitationsData) {
-      // Vérifier si un user_role existe pour cet email
-      const { data: existingAdmin } = await supabase
-        .from("user_roles")
-        .select("id, user_id")
-        .eq("role", "school_admin")
-        .eq("school_id", invitation.school_id)
-        .limit(1);
-
-      // Si un admin existe, vérifier si son email correspond
-      if (existingAdmin && existingAdmin.length > 0) {
-        // Récupérer l'email de l'utilisateur via auth
-        const { data: { user } } = await supabase.auth.admin.getUserById(existingAdmin[0].user_id);
-        
-        if (user && user.email === invitation.email) {
-          // Cet admin a déjà accepté son invitation, on le skip
-          // Optionnel : mettre à jour accepted = true dans invitations
-          await supabase
-            .from("invitations")
-            .update({ accepted: true })
-            .eq("id", invitation.id);
-          continue;
-        }
-      }
-
-      // Sinon, l'invitation est toujours en attente
-      filteredInvitations.push(invitation);
-    }
-
-    setInvitations(filteredInvitations);
+    setInvitations(data ?? []);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (!user) {
         throw new Error("Utilisateur non authentifié");
       }
 
-      // Use Supabase's native invitation system via edge function
-      const { data, error: inviteError } = await supabase.functions.invoke('invite-school-admin', {
-        body: {
-          email: formData.email,
-          school_id: formData.school_id,
-          first_name: formData.first_name,
-          last_name: formData.last_name,
-          phone: formData.phone,
-          redirect_to: `${window.location.origin}/set-password`,
+      // Envoi via Edge Function
+      const { error: inviteError } = await supabase.functions.invoke(
+        "invite-school-admin",
+        {
+          body: {
+            email: formData.email,
+            school_id: formData.school_id,
+            first_name: formData.first_name,
+            last_name: formData.last_name,
+            phone: formData.phone,
+            redirect_to: `${window.location.origin}/set-password`,
+          },
         }
-      });
+      );
 
       if (inviteError) {
-        console.error('Invitation error:', inviteError);
+        console.error("Invitation error:", inviteError);
         throw new Error("Erreur lors de l'envoi de l'invitation");
       }
 
-      // Create invitation record for tracking
+      // Enregistrement local de suivi (facultatif si l’Edge Function l’écrit déjà)
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 72);
-      
-      const { error: recordError } = await supabase
-        .from("invitations")
-        .insert({
-          email: formData.email,
-          school_id: formData.school_id,
-          role: "school_admin",
-          token: crypto.randomUUID(),
-          expires_at: expiresAt.toISOString(),
-          created_by: user.id,
-        });
+
+      const { error: recordError } = await supabase.from("invitations").insert({
+        email: formData.email,
+        school_id: formData.school_id,
+        role: "school_admin",
+        token: crypto.randomUUID(),
+        expires_at: expiresAt.toISOString(),
+        created_by: user.id,
+      });
 
       if (recordError) {
-        console.error('Record error:', recordError);
-        // Don't fail if we can't create the record, the invitation was sent
+        console.error("Record error:", recordError);
+        // On n’échoue pas l’UX si l’écriture de suivi échoue
       }
 
       toast({
         title: "Invitation envoyée",
-        description: `Une invitation a été envoyée à ${formData.email}. L'administrateur recevra un email pour créer son compte.`,
+        description: `Une invitation a été envoyée à ${formData.email}.`,
       });
 
       setDialogOpen(false);
@@ -208,7 +194,7 @@ export default function Admins() {
           Retour au tableau de bord
         </Button>
       </div>
-      
+
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
@@ -246,7 +232,10 @@ export default function Admins() {
 
               <div className="space-y-2">
                 <Label htmlFor="school_id">Établissement *</Label>
-                <Select value={formData.school_id} onValueChange={(value) => setFormData({ ...formData, school_id: value })}>
+                <Select
+                  value={formData.school_id}
+                  onValueChange={(value) => setFormData({ ...formData, school_id: value })}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Sélectionner un établissement" />
                   </SelectTrigger>
@@ -317,6 +306,7 @@ export default function Admins() {
             </TabsTrigger>
           </TabsList>
 
+          {/* Invitations en attente */}
           <TabsContent value="pending">
             {invitations.length === 0 ? (
               <Card>
@@ -342,7 +332,7 @@ export default function Admins() {
                     <CardContent className="space-y-3">
                       <Badge variant="secondary">En attente d'acceptation</Badge>
                       <Badge variant="outline">{typeLabels[invitation.schools?.type]}</Badge>
-                      
+
                       <div className="text-xs text-muted-foreground">
                         Invité le {new Date(invitation.created_at).toLocaleDateString()}
                       </div>
@@ -356,6 +346,7 @@ export default function Admins() {
             )}
           </TabsContent>
 
+          {/* Admins approuvés */}
           <TabsContent value="approved">
             {admins.length === 0 ? (
               <Card>
@@ -381,7 +372,7 @@ export default function Admins() {
                     <CardContent className="space-y-3">
                       <Badge variant="default">Actif</Badge>
                       <Badge variant="outline">{typeLabels[admin.schools?.type]}</Badge>
-                      
+
                       {admin.profiles?.phone && (
                         <div className="flex items-center gap-2 text-sm">
                           <Phone className="h-4 w-4 text-muted-foreground" />
