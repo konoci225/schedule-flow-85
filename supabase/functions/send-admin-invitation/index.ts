@@ -1,7 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "npm:resend@2.0.0";
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -26,29 +25,42 @@ const handler = async (req: Request): Promise<Response> => {
 
     const invitationUrl = `${Deno.env.get("VITE_SUPABASE_URL")}/auth/accept-invite?token=${token}`;
 
-    const emailResponse = await resend.emails.send({
-      from: "EduSchedule <onboarding@resend.dev>",
-      to: [email],
-      subject: "Invitation - Administrateur d'Établissement",
-      html: `
-        <h1>Bienvenue sur EduSchedule!</h1>
-        <p>Vous avez été invité à devenir administrateur de <strong>${school_name}</strong>.</p>
-        <p>Cette invitation est valable pendant 72 heures.</p>
-        <p>
-          <a href="${invitationUrl}" style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
-            Accepter l'invitation
-          </a>
-        </p>
-        <p>Ou copiez ce lien dans votre navigateur:</p>
-        <p style="color: #666; font-size: 12px;">${invitationUrl}</p>
-        <br>
-        <p style="color: #666; font-size: 12px;">Si vous n'avez pas demandé cette invitation, vous pouvez ignorer cet email.</p>
-      `,
+    const emailResponse = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "EduSchedule <onboarding@resend.dev>",
+        to: [email],
+        subject: "Invitation - Administrateur d'Établissement",
+        html: `
+          <h1>Bienvenue sur EduSchedule!</h1>
+          <p>Vous avez été invité à devenir administrateur de <strong>${school_name}</strong>.</p>
+          <p>Cette invitation est valable pendant 72 heures.</p>
+          <p>
+            <a href="${invitationUrl}" style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+              Accepter l'invitation
+            </a>
+          </p>
+          <p>Ou copiez ce lien dans votre navigateur:</p>
+          <p style="color: #666; font-size: 12px;">${invitationUrl}</p>
+          <br>
+          <p style="color: #666; font-size: 12px;">Si vous n'avez pas demandé cette invitation, vous pouvez ignorer cet email.</p>
+        `,
+      }),
     });
 
-    console.log("Invitation email sent successfully:", emailResponse);
+    const data = await emailResponse.json();
+    
+    if (!emailResponse.ok) {
+      throw new Error(`Resend API error: ${JSON.stringify(data)}`);
+    }
 
-    return new Response(JSON.stringify(emailResponse), {
+    console.log("Invitation email sent successfully:", data);
+
+    return new Response(JSON.stringify(data), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
