@@ -220,29 +220,37 @@ export default function TeacherRegistration() {
               </div>
             </div>
 
-            {formData.school_id && subjects.length > 0 && (
+            {formData.school_id && (
               <div className="space-y-2">
-                <Label>Matières enseignées *</Label>
-                <div className="border rounded-lg p-4 space-y-2 max-h-48 overflow-y-auto">
-                  {subjects.map((subject) => (
-                    <div key={subject.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={subject.id}
-                        checked={selectedSubjects.includes(subject.id)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedSubjects([...selectedSubjects, subject.id]);
-                          } else {
-                            setSelectedSubjects(selectedSubjects.filter(id => id !== subject.id));
-                          }
-                        }}
-                      />
-                      <label htmlFor={subject.id} className="text-sm cursor-pointer">
-                        {subject.name} ({subject.code})
-                      </label>
-                    </div>
-                  ))}
-                </div>
+                <Label>Discipline / Matières enseignées *</Label>
+                {subjects.length > 0 ? (
+                  <div className="border rounded-lg p-4 space-y-2 max-h-48 overflow-y-auto">
+                    {subjects.map((subject) => (
+                      <div key={subject.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={subject.id}
+                          checked={selectedSubjects.includes(subject.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedSubjects([...selectedSubjects, subject.id]);
+                            } else {
+                              setSelectedSubjects(selectedSubjects.filter(id => id !== subject.id));
+                            }
+                          }}
+                        />
+                        <label htmlFor={subject.id} className="text-sm cursor-pointer">
+                          {subject.name} ({subject.code})
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="border rounded-lg p-4 text-center text-muted-foreground text-sm">
+                    Aucune matière n'est encore configurée pour cet établissement.
+                    <br />
+                    Veuillez contacter l'administration de l'établissement.
+                  </div>
+                )}
               </div>
             )}
 

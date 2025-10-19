@@ -4,16 +4,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Shield, Mail, Phone, Building2, ArrowLeft } from "lucide-react";
+import { Plus, Shield, Mail, Phone, Building2, ArrowLeft, Clock } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Admins() {
   const navigate = useNavigate();
   const [admins, setAdmins] = useState<any[]>([]);
+  const [invitations, setInvitations] = useState<any[]>([]);
   const [schools, setSchools] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -29,6 +31,7 @@ export default function Admins() {
 
   useEffect(() => {
     fetchAdmins();
+    fetchInvitations();
     fetchSchools();
   }, []);
 
@@ -49,7 +52,7 @@ export default function Admins() {
       .from("user_roles")
       .select(`
         *,
-        profiles (first_name, last_name, phone),
+        profiles!inner (first_name, last_name, phone),
         schools (name, type)
       `)
       .eq("role", "school_admin")
@@ -61,13 +64,26 @@ export default function Admins() {
     setLoading(false);
   };
 
+  const fetchInvitations = async () => {
+    const { data, error } = await supabase
+      .from("invitations")
+      .select(`
+        *,
+        schools (name, type)
+      `)
+      .eq("role", "school_admin")
+      .eq("accepted", false)
+      .order("created_at", { ascending: false });
+
+    if (!error && data) {
+      setInvitations(data);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
-      // Generate random password
-      const tempPassword = Math.random().toString(36).slice(-12) + "A1!";
-
       // Create invitation token
       const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
       const expiresAt = new Date();
@@ -79,6 +95,9 @@ export default function Admins() {
         throw new Error("Utilisateur non authentifié");
       }
 
+      // Get school name for email
+      const school = schools.find(s => s.id === formData.school_id);
+      
       // Insert invitation
       const { error: inviteError } = await supabase
         .from("invitations")
@@ -93,10 +112,28 @@ export default function Admins() {
 
       if (inviteError) throw inviteError;
 
-      toast({
-        title: "Invitation envoyée",
-        description: `Une invitation a été envoyée à ${formData.email}. L'administrateur devra créer son compte dans les 72 heures.`,
+      // Send invitation email via edge function
+      const { error: emailError } = await supabase.functions.invoke('send-admin-invitation', {
+        body: {
+          email: formData.email,
+          school_name: school?.name || 'votre établissement',
+          token: token,
+        }
       });
+
+      if (emailError) {
+        console.error('Email error:', emailError);
+        toast({
+          title: "Invitation créée",
+          description: "L'invitation a été créée mais l'email n'a pas pu être envoyé. Veuillez vérifier la configuration RESEND_API_KEY.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Invitation envoyée",
+          description: `Une invitation a été envoyée à ${formData.email}. L'administrateur devra créer son compte dans les 72 heures.`,
+        });
+      }
 
       setDialogOpen(false);
       setFormData({
@@ -106,7 +143,7 @@ export default function Admins() {
         phone: "",
         school_id: "",
       });
-      fetchAdmins();
+      fetchInvitations();
     } catch (error: any) {
       toast({
         title: "Erreur",
@@ -228,44 +265,101 @@ export default function Admins() {
 
       {loading ? (
         <div className="text-center py-12">Chargement...</div>
-      ) : admins.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Shield className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">Aucun administrateur pour le moment</p>
-          </CardContent>
-        </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {admins.map((admin) => (
-            <Card key={admin.id} className="hover:shadow-lg transition-all duration-300">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-primary" />
-                  {admin.profiles?.first_name} {admin.profiles?.last_name}
-                </CardTitle>
-                <CardDescription className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4" />
-                  {admin.schools?.name}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Badge variant="outline">{typeLabels[admin.schools?.type]}</Badge>
-                
-                {admin.profiles?.phone && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span>{admin.profiles.phone}</span>
-                  </div>
-                )}
+        <Tabs defaultValue="pending" className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2 mb-8">
+            <TabsTrigger value="pending" className="gap-2">
+              <Clock className="h-4 w-4" />
+              En attente ({invitations.length})
+            </TabsTrigger>
+            <TabsTrigger value="approved" className="gap-2">
+              <Shield className="h-4 w-4" />
+              Approuvés ({admins.length})
+            </TabsTrigger>
+          </TabsList>
 
-                <div className="text-xs text-muted-foreground">
-                  Créé le {new Date(admin.created_at).toLocaleDateString()}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+          <TabsContent value="pending">
+            {invitations.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Clock className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">Aucune invitation en attente</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {invitations.map((invitation) => (
+                  <Card key={invitation.id} className="hover:shadow-lg transition-all duration-300">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Mail className="h-5 w-5 text-primary" />
+                        {invitation.email}
+                      </CardTitle>
+                      <CardDescription className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        {invitation.schools?.name}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <Badge variant="secondary">En attente d'acceptation</Badge>
+                      <Badge variant="outline">{typeLabels[invitation.schools?.type]}</Badge>
+                      
+                      <div className="text-xs text-muted-foreground">
+                        Invité le {new Date(invitation.created_at).toLocaleDateString()}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Expire le {new Date(invitation.expires_at).toLocaleDateString()}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="approved">
+            {admins.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Shield className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">Aucun administrateur approuvé</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {admins.map((admin) => (
+                  <Card key={admin.id} className="hover:shadow-lg transition-all duration-300">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Shield className="h-5 w-5 text-primary" />
+                        {admin.profiles?.first_name} {admin.profiles?.last_name}
+                      </CardTitle>
+                      <CardDescription className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        {admin.schools?.name}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <Badge variant="default">Actif</Badge>
+                      <Badge variant="outline">{typeLabels[admin.schools?.type]}</Badge>
+                      
+                      {admin.profiles?.phone && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Phone className="h-4 w-4 text-muted-foreground" />
+                          <span>{admin.profiles.phone}</span>
+                        </div>
+                      )}
+
+                      <div className="text-xs text-muted-foreground">
+                        Créé le {new Date(admin.created_at).toLocaleDateString()}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       )}
     </div>
   );

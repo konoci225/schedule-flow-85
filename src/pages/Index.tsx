@@ -14,6 +14,15 @@ const Index = () => {
 
   const checkSetupStatus = async () => {
     try {
+      // Check if user is already authenticated
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // If user is authenticated, redirect to dashboard
+      if (session) {
+        navigate("/dashboard");
+        return;
+      }
+
       const { data, error } = await supabase
         .from("setup_config")
         .select("first_setup_completed")
