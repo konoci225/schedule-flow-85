@@ -14,6 +14,7 @@ const SetPassword = () => {
   const [verifying, setVerifying] = useState(true);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
     // Check if user is already authenticated from the invite link
@@ -42,6 +43,8 @@ const SetPassword = () => {
           return;
         }
 
+        // Sauvegarder l'email de l'utilisateur pour la mise à jour de l'invitation
+        setUserEmail(session.user.email || null);
         setVerifying(false);
       } catch (error) {
         console.error('Error checking session:', error);
@@ -81,18 +84,33 @@ const SetPassword = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({
+      // Mettre à jour le mot de passe
+      const { error: updateError } = await supabase.auth.updateUser({
         password: password,
       });
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      // Marquer l'invitation comme acceptée
+      if (userEmail) {
+        const { error: invitationError } = await supabase
+          .from("invitations")
+          .update({ accepted: true })
+          .eq("email", userEmail)
+          .eq("role", "school_admin");
+
+        if (invitationError) {
+          console.error("Erreur lors de la mise à jour de l'invitation:", invitationError);
+          // Ne pas bloquer le flux si cette mise à jour échoue
+        }
+      }
 
       toast({
         title: "Mot de passe défini",
         description: "Votre compte a été activé avec succès. Redirection vers votre tableau de bord...",
       });
 
-      // Wait a moment before redirecting
+      // Attendre un moment avant de rediriger
       setTimeout(() => {
         navigate("/dashboard");
       }, 2000);
