@@ -1,30 +1,17 @@
-// src/pages/Admins.tsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Shield, Mail, Phone, Building2, ArrowLeft, Clock } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Plus, Shield, Mail, Phone, Building2, ArrowLeft, Clock, AlertCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function Admins() {
   const navigate = useNavigate();
@@ -33,6 +20,7 @@ export default function Admins() {
   const [schools, setSchools] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<string>("");
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -61,19 +49,39 @@ export default function Admins() {
     }
   };
 
-  // ✅ Corrigé: LEFT JOIN implicite sur profiles (supprime le !inner)
   const fetchAdmins = async () => {
+    console.log("🔍 Starting fetchAdmins...");
+    
     const { data, error } = await supabase
       .from("user_roles")
-      .select(
-        `
+      .select(`
         *,
         profiles (first_name, last_name, phone),
         schools (name, type)
-      `
-      )
+      `)
       .eq("role", "school_admin")
       .order("created_at", { ascending: false });
+
+    console.log("📊 fetchAdmins result:", { error, data, count: data?.length });
+    
+    let debug = `=== DEBUG ADMINS ===\n`;
+    debug += `Error: ${error ? JSON.stringify(error) : "null"}\n`;
+    debug += `Data count: ${data?.length || 0}\n\n`;
+    
+    if (data) {
+      data.forEach((admin, index) => {
+        debug += `Admin ${index + 1}:\n`;
+        debug += `  - user_id: ${admin.user_id}\n`;
+        debug += `  - school_id: ${admin.school_id}\n`;
+        debug += `  - has_profile: ${!!admin.profiles}\n`;
+        debug += `  - profile: ${JSON.stringify(admin.profiles)}\n`;
+        debug += `  - has_school: ${!!admin.schools}\n`;
+        debug += `  - school: ${admin.schools?.name}\n\n`;
+      });
+    }
+    
+    setDebugInfo(debug);
+    console.log(debug);
 
     if (!error && data) {
       setAdmins(data);
@@ -81,77 +89,71 @@ export default function Admins() {
     setLoading(false);
   };
 
-  // ✅ Corrigé: suppression de l’usage de supabase.auth.admin.getUserById côté client
-  // On affiche simplement les invitations non acceptées.
   const fetchInvitations = async () => {
+    console.log("🔍 Starting fetchInvitations...");
+    
     const { data, error } = await supabase
       .from("invitations")
-      .select(
-        `
+      .select(`
         *,
         schools (name, type)
-      `
-      )
+      `)
       .eq("role", "school_admin")
       .eq("accepted", false)
       .order("created_at", { ascending: false });
+
+    console.log("📊 fetchInvitations result:", { error, data, count: data?.length });
 
     if (error) {
       console.error("Error fetching invitations:", error);
       setInvitations([]);
       return;
     }
-    setInvitations(data ?? []);
+    setInvitations(data || []);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
+      const { data: { user } } = await supabase.auth.getUser();
+      
       if (!user) {
         throw new Error("Utilisateur non authentifié");
       }
 
-      // Envoi via Edge Function
-      const { error: inviteError } = await supabase.functions.invoke(
-        "invite-school-admin",
-        {
-          body: {
-            email: formData.email,
-            school_id: formData.school_id,
-            first_name: formData.first_name,
-            last_name: formData.last_name,
-            phone: formData.phone,
-            redirect_to: `${window.location.origin}/set-password`,
-          },
+      const { error: inviteError } = await supabase.functions.invoke('invite-school-admin', {
+        body: {
+          email: formData.email,
+          school_id: formData.school_id,
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          phone: formData.phone,
+          redirect_to: `${window.location.origin}/set-password`,
         }
-      );
+      });
 
       if (inviteError) {
-        console.error("Invitation error:", inviteError);
+        console.error('Invitation error:', inviteError);
         throw new Error("Erreur lors de l'envoi de l'invitation");
       }
 
-      // Enregistrement local de suivi (facultatif si l’Edge Function l’écrit déjà)
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 72);
-
-      const { error: recordError } = await supabase.from("invitations").insert({
-        email: formData.email,
-        school_id: formData.school_id,
-        role: "school_admin",
-        token: crypto.randomUUID(),
-        expires_at: expiresAt.toISOString(),
-        created_by: user.id,
-      });
+      
+      const { error: recordError } = await supabase
+        .from("invitations")
+        .insert({
+          email: formData.email,
+          school_id: formData.school_id,
+          role: "school_admin",
+          token: crypto.randomUUID(),
+          expires_at: expiresAt.toISOString(),
+          created_by: user.id,
+        });
 
       if (recordError) {
-        console.error("Record error:", recordError);
-        // On n’échoue pas l’UX si l’écriture de suivi échoue
+        console.error('Record error:', recordError);
       }
 
       toast({
@@ -194,7 +196,20 @@ export default function Admins() {
           Retour au tableau de bord
         </Button>
       </div>
-
+      
+      {/* Zone de debug */}
+      {debugInfo && (
+        <Alert className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Debug Info (ouvrir la console pour plus de détails)</AlertTitle>
+          <AlertDescription>
+            <pre className="text-xs mt-2 overflow-auto max-h-48 whitespace-pre-wrap">
+              {debugInfo}
+            </pre>
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
@@ -232,10 +247,7 @@ export default function Admins() {
 
               <div className="space-y-2">
                 <Label htmlFor="school_id">Établissement *</Label>
-                <Select
-                  value={formData.school_id}
-                  onValueChange={(value) => setFormData({ ...formData, school_id: value })}
-                >
+                <Select value={formData.school_id} onValueChange={(value) => setFormData({ ...formData, school_id: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Sélectionner un établissement" />
                   </SelectTrigger>
@@ -306,7 +318,6 @@ export default function Admins() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Invitations en attente */}
           <TabsContent value="pending">
             {invitations.length === 0 ? (
               <Card>
@@ -332,7 +343,7 @@ export default function Admins() {
                     <CardContent className="space-y-3">
                       <Badge variant="secondary">En attente d'acceptation</Badge>
                       <Badge variant="outline">{typeLabels[invitation.schools?.type]}</Badge>
-
+                      
                       <div className="text-xs text-muted-foreground">
                         Invité le {new Date(invitation.created_at).toLocaleDateString()}
                       </div>
@@ -346,7 +357,6 @@ export default function Admins() {
             )}
           </TabsContent>
 
-          {/* Admins approuvés */}
           <TabsContent value="approved">
             {admins.length === 0 ? (
               <Card>
@@ -362,17 +372,19 @@ export default function Admins() {
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <Shield className="h-5 w-5 text-primary" />
-                        {admin.profiles?.first_name} {admin.profiles?.last_name}
+                        {admin.profiles?.first_name || "[Pas de prénom]"} {admin.profiles?.last_name || "[Pas de nom]"}
                       </CardTitle>
                       <CardDescription className="flex items-center gap-2">
                         <Building2 className="h-4 w-4" />
-                        {admin.schools?.name}
+                        {admin.schools?.name || "[École inconnue]"}
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <Badge variant="default">Actif</Badge>
-                      <Badge variant="outline">{typeLabels[admin.schools?.type]}</Badge>
-
+                      {admin.schools?.type && (
+                        <Badge variant="outline">{typeLabels[admin.schools.type]}</Badge>
+                      )}
+                      
                       {admin.profiles?.phone && (
                         <div className="flex items-center gap-2 text-sm">
                           <Phone className="h-4 w-4 text-muted-foreground" />
@@ -382,6 +394,10 @@ export default function Admins() {
 
                       <div className="text-xs text-muted-foreground">
                         Créé le {new Date(admin.created_at).toLocaleDateString()}
+                      </div>
+                      
+                      <div className="text-xs text-muted-foreground">
+                        User ID: {admin.user_id.substring(0, 8)}...
                       </div>
                     </CardContent>
                   </Card>
