@@ -96,8 +96,8 @@ const SetPassword = () => {
         const { error: invitationError } = await supabase
           .from("invitations")
           .update({ accepted: true })
-          .eq("email", userEmail)
-          .eq("role", "school_admin");
+          .eq("email", userEmail.toLowerCase())
+          .eq("accepted", false);
 
         if (invitationError) {
           console.error("Erreur lors de la mise à jour de l'invitation:", invitationError);

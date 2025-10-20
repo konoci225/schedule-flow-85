@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      classes: {
+        Row: {
+          academic_year: string | null
+          capacity: number | null
+          code: string
+          created_at: string | null
+          description: string | null
+          id: string
+          level: string | null
+          name: string
+          school_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          academic_year?: string | null
+          capacity?: number | null
+          code: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          level?: string | null
+          name: string
+          school_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          academic_year?: string | null
+          capacity?: number | null
+          code?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          level?: string | null
+          name?: string
+          school_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "classes_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invitations: {
         Row: {
           accepted: boolean | null
@@ -107,6 +154,62 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "profiles_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rooms: {
+        Row: {
+          building: string | null
+          capacity: number | null
+          code: string
+          created_at: string | null
+          description: string | null
+          equipment: string[] | null
+          floor: string | null
+          id: string
+          is_available: boolean | null
+          name: string
+          room_type: string | null
+          school_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          building?: string | null
+          capacity?: number | null
+          code: string
+          created_at?: string | null
+          description?: string | null
+          equipment?: string[] | null
+          floor?: string | null
+          id?: string
+          is_available?: boolean | null
+          name: string
+          room_type?: string | null
+          school_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          building?: string | null
+          capacity?: number | null
+          code?: string
+          created_at?: string | null
+          description?: string | null
+          equipment?: string[] | null
+          floor?: string | null
+          id?: string
+          is_available?: boolean | null
+          name?: string
+          room_type?: string | null
+          school_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rooms_school_id_fkey"
             columns: ["school_id"]
             isOneToOne: false
             referencedRelation: "schools"

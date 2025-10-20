@@ -61,14 +61,26 @@ export const SchoolAdminDashboard = ({ profile, userRole }: { profile: any; user
         .select("id")
         .eq("school_id", roleData.school_id);
 
+      // Load classes
+      const { data: classesData } = await supabase
+        .from("classes")
+        .select("id")
+        .eq("school_id", roleData.school_id);
+
+      // Load rooms
+      const { data: roomsData } = await supabase
+        .from("rooms")
+        .select("id")
+        .eq("school_id", roleData.school_id);
+
       const pendingTeachers = teachersData?.filter((t) => !t.is_approved).length || 0;
 
       setStats({
         totalTeachers: teachersData?.length || 0,
         pendingTeachers,
         totalSubjects: subjectsData?.length || 0,
-        totalClasses: 0, // To be implemented in Phase 2
-        totalRooms: 0, // To be implemented in Phase 2
+        totalClasses: classesData?.length || 0,
+        totalRooms: roomsData?.length || 0,
       });
     } catch (error) {
       console.error("Error loading dashboard data:", error);
@@ -131,7 +143,10 @@ export const SchoolAdminDashboard = ({ profile, userRole }: { profile: any; user
           </div>
         </Card>
 
-        <Card className="p-6 space-y-2 opacity-50">
+        <Card
+          className="p-6 space-y-2 cursor-pointer hover:shadow-lg transition-all"
+          onClick={() => navigate("/classes")}
+        >
           <div className="flex items-center justify-between">
             <div className="h-12 w-12 rounded-lg bg-secondary/10 flex items-center justify-center">
               <ClipboardList className="h-6 w-6 text-secondary" />
@@ -140,11 +155,13 @@ export const SchoolAdminDashboard = ({ profile, userRole }: { profile: any; user
           <div className="space-y-1">
             <p className="text-3xl font-bold">{stats.totalClasses}</p>
             <p className="text-sm text-muted-foreground">Classes</p>
-            <p className="text-xs text-muted-foreground">À venir</p>
           </div>
         </Card>
 
-        <Card className="p-6 space-y-2 opacity-50">
+        <Card
+          className="p-6 space-y-2 cursor-pointer hover:shadow-lg transition-all"
+          onClick={() => navigate("/rooms")}
+        >
           <div className="flex items-center justify-between">
             <div className="h-12 w-12 rounded-lg bg-muted/50 flex items-center justify-center">
               <DoorOpen className="h-6 w-6 text-muted-foreground" />
@@ -153,7 +170,6 @@ export const SchoolAdminDashboard = ({ profile, userRole }: { profile: any; user
           <div className="space-y-1">
             <p className="text-3xl font-bold">{stats.totalRooms}</p>
             <p className="text-sm text-muted-foreground">Salles</p>
-            <p className="text-xs text-muted-foreground">À venir</p>
           </div>
         </Card>
       </div>
