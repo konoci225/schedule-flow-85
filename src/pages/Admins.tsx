@@ -4,14 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Shield, Mail, Phone, Building2, ArrowLeft, Clock, AlertCircle } from "lucide-react";
+import { Plus, Shield, Mail, Phone, Building2, ArrowLeft, Clock } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
 
 export default function Admins() {
   const navigate = useNavigate();
@@ -20,7 +20,6 @@ export default function Admins() {
   const [schools, setSchools] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<string>("");
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -58,9 +57,6 @@ export default function Admins() {
   };
 
   const fetchAdmins = async () => {
-    console.log("🔍 Starting fetchAdmins...");
-    
-    // 1. Récupérer les user_roles avec leurs écoles
     const { data: userRolesData, error: userRolesError } = await supabase
       .from("user_roles")
       .select("*, schools (name, type)")
@@ -72,65 +68,32 @@ export default function Admins() {
       return;
     }
 
-    console.log("📊 user_roles data:", userRolesData);
-
-    // 2. Pour chaque user_role, récupérer le profile correspondant
+    // Pour chaque user_role, récupérer le profile correspondant
     const adminsWithProfiles = await Promise.all(
       (userRolesData || []).map(async (userRole) => {
-        const { data: profile, error: profileError } = await supabase
+        const { data: profile } = await supabase
           .from("profiles")
           .select("first_name, last_name, phone")
           .eq("id", userRole.user_id)
           .single();
 
-        if (profileError) {
-          console.error(`Error fetching profile for ${userRole.user_id}:`, profileError);
-        }
-
         return {
           ...userRole,
-          profiles: profile,
+          profile: profile || { first_name: "", last_name: "", phone: "" },
         };
       })
     );
-
-    console.log("📊 admins with profiles:", adminsWithProfiles);
-
-    // 3. Debug info
-    let debug = `=== DEBUG ADMINS ===\n`;
-    debug += `User roles count: ${userRolesData?.length || 0}\n\n`;
-    
-    adminsWithProfiles.forEach((admin, index) => {
-      debug += `Admin ${index + 1}:\n`;
-      debug += `  - user_id: ${admin.user_id}\n`;
-      debug += `  - school: ${admin.schools?.name}\n`;
-      debug += `  - has_profile: ${!!admin.profiles}\n`;
-      if (admin.profiles) {
-        debug += `  - name: ${admin.profiles.first_name} ${admin.profiles.last_name}\n`;
-        debug += `  - phone: ${admin.profiles.phone}\n`;
-      }
-      debug += `\n`;
-    });
-    
-    setDebugInfo(debug);
-    console.log(debug);
 
     setAdmins(adminsWithProfiles);
   };
 
   const fetchInvitations = async () => {
-    console.log("🔍 Starting fetchInvitations...");
-    
     const { data, error } = await supabase
       .from("invitations")
-      .select(`
-        *,
-        schools (name, type)
-      `)
+      .select("*, schools (name, type)")
       .eq("role", "school_admin")
+      .eq("accepted", false)
       .order("created_at", { ascending: false });
-
-    console.log("📊 fetchInvitations result:", { error, data, count: data?.length });
 
     if (error) {
       console.error("Error fetching invitations:", error);
@@ -138,24 +101,12 @@ export default function Admins() {
       return;
     }
 
-    // Filtrer pour garder seulement les invitations vraiment en attente
+    // Filtrer pour garder seulement les invitations non expirées
     const pendingInvitations = (data || []).filter(invitation => {
-      // Une invitation est vraiment en attente si:
-      // - elle n'est pas acceptée
-      // - elle n'est pas expirée
       const isExpired = new Date(invitation.expires_at) < new Date();
-      const isPending = !invitation.accepted && !isExpired;
-      
-      console.log(`📋 Invitation ${invitation.email}:`, {
-        accepted: invitation.accepted,
-        expired: isExpired,
-        pending: isPending
-      });
-
-      return isPending;
+      return !isExpired;
     });
 
-    console.log("✅ Filtered pending invitations:", pendingInvitations);
     setInvitations(pendingInvitations);
   };
 
@@ -270,19 +221,6 @@ export default function Admins() {
           Retour au tableau de bord
         </Button>
       </div>
-      
-      {/* Zone de debug - à retirer en production */}
-      {process.env.NODE_ENV === 'development' && debugInfo && (
-        <Alert className="mb-6">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Debug Info</AlertTitle>
-          <AlertDescription>
-            <pre className="text-xs mt-2 overflow-auto max-h-48 whitespace-pre-wrap">
-              {debugInfo}
-            </pre>
-          </AlertDescription>
-        </Alert>
-      )}
       
       <div className="flex justify-between items-center mb-8">
         <div>
@@ -450,11 +388,11 @@ export default function Admins() {
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <Shield className="h-5 w-5 text-primary" />
-                        {admin.profiles?.first_name || "[Pas de prénom]"} {admin.profiles?.last_name || "[Pas de nom]"}
+                        {admin.profile?.first_name} {admin.profile?.last_name}
                       </CardTitle>
                       <CardDescription className="flex items-center gap-2">
                         <Building2 className="h-4 w-4" />
-                        {admin.schools?.name || "[École inconnue]"}
+                        {admin.schools?.name}
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
@@ -463,10 +401,10 @@ export default function Admins() {
                         <Badge variant="outline">{typeLabels[admin.schools.type]}</Badge>
                       )}
                       
-                      {admin.profiles?.phone && (
+                      {admin.profile?.phone && (
                         <div className="flex items-center gap-2 text-sm">
                           <Phone className="h-4 w-4 text-muted-foreground" />
-                          <span>{admin.profiles.phone}</span>
+                          <span>{admin.profile.phone}</span>
                         </div>
                       )}
 
