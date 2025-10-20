@@ -15,6 +15,8 @@ import TeacherRegistration from "./pages/TeacherRegistration";
 import SetPassword from "./pages/SetPassword";
 import Classes from "./pages/Classes";
 import Rooms from "./pages/Rooms";
+import Subjects from "./pages/Subjects";
+import Timetables from "./pages/Timetables";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +40,8 @@ const App = () => (
           <Route path="/register-teacher" element={<TeacherRegistration />} />
           <Route path="/classes" element={<Classes />} />
           <Route path="/rooms" element={<Rooms />} />
+          <Route path="/subjects" element={<Subjects />} />
+          <Route path="/timetables" element={<Timetables />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

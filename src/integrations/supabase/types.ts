@@ -434,6 +434,90 @@ export type Database = {
           },
         ]
       }
+      timetables: {
+        Row: {
+          academic_year: string | null
+          class_id: string
+          created_at: string | null
+          day_of_week: number
+          end_time: string
+          id: string
+          notes: string | null
+          room_id: string | null
+          school_id: string
+          start_time: string
+          subject_id: string
+          teacher_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          academic_year?: string | null
+          class_id: string
+          created_at?: string | null
+          day_of_week: number
+          end_time: string
+          id?: string
+          notes?: string | null
+          room_id?: string | null
+          school_id: string
+          start_time: string
+          subject_id: string
+          teacher_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          academic_year?: string | null
+          class_id?: string
+          created_at?: string | null
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          notes?: string | null
+          room_id?: string | null
+          school_id?: string
+          start_time?: string
+          subject_id?: string
+          teacher_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timetables_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timetables_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timetables_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timetables_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timetables_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null

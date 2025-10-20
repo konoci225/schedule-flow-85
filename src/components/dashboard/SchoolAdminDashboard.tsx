@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Users, BookOpen, DoorOpen, Calendar, Plus, UserCheck, ClipboardList } from "lucide-react";
+import { Users, BookOpen, DoorOpen, Calendar, Plus, UserCheck, ClipboardList, Book } from "lucide-react";
 
 interface SchoolStats {
   totalTeachers: number;
@@ -11,6 +11,7 @@ interface SchoolStats {
   totalSubjects: number;
   totalClasses: number;
   totalRooms: number;
+  totalTimetables: number;
 }
 
 export const SchoolAdminDashboard = ({ profile, userRole }: { profile: any; userRole: any }) => {
@@ -21,6 +22,7 @@ export const SchoolAdminDashboard = ({ profile, userRole }: { profile: any; user
     totalSubjects: 0,
     totalClasses: 0,
     totalRooms: 0,
+    totalTimetables: 0,
   });
   const [school, setSchool] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -73,6 +75,12 @@ export const SchoolAdminDashboard = ({ profile, userRole }: { profile: any; user
         .select("id")
         .eq("school_id", roleData.school_id);
 
+      // Load timetables
+      const { data: timetablesData } = await supabase
+        .from("timetables")
+        .select("id")
+        .eq("school_id", roleData.school_id);
+
       const pendingTeachers = teachersData?.filter((t) => !t.is_approved).length || 0;
 
       setStats({
@@ -81,6 +89,7 @@ export const SchoolAdminDashboard = ({ profile, userRole }: { profile: any; user
         totalSubjects: subjectsData?.length || 0,
         totalClasses: classesData?.length || 0,
         totalRooms: roomsData?.length || 0,
+        totalTimetables: timetablesData?.length || 0,
       });
     } catch (error) {
       console.error("Error loading dashboard data:", error);
@@ -110,7 +119,7 @@ export const SchoolAdminDashboard = ({ profile, userRole }: { profile: any; user
       </div>
 
       {/* Stats Cards */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid md:grid-cols-2 lg:grid-cols-6 gap-4">
         <Card
           className="p-6 space-y-2 cursor-pointer hover:shadow-lg transition-all"
           onClick={() => navigate("/teachers")}
@@ -131,10 +140,13 @@ export const SchoolAdminDashboard = ({ profile, userRole }: { profile: any; user
           </div>
         </Card>
 
-        <Card className="p-6 space-y-2">
+        <Card 
+          className="p-6 space-y-2 cursor-pointer hover:shadow-lg transition-all"
+          onClick={() => navigate("/subjects")}
+        >
           <div className="flex items-center justify-between">
             <div className="h-12 w-12 rounded-lg bg-accent/10 flex items-center justify-center">
-              <BookOpen className="h-6 w-6 text-accent" />
+              <Book className="h-6 w-6 text-accent" />
             </div>
           </div>
           <div className="space-y-1">
@@ -172,6 +184,21 @@ export const SchoolAdminDashboard = ({ profile, userRole }: { profile: any; user
             <p className="text-sm text-muted-foreground">Salles</p>
           </div>
         </Card>
+
+        <Card
+          className="p-6 space-y-2 cursor-pointer hover:shadow-lg transition-all lg:col-span-2"
+          onClick={() => navigate("/timetables")}
+        >
+          <div className="flex items-center justify-between">
+            <div className="h-12 w-12 rounded-lg bg-blue-500/10 flex items-center justify-center">
+              <Calendar className="h-6 w-6 text-blue-500" />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <p className="text-3xl font-bold">{stats.totalTimetables}</p>
+            <p className="text-sm text-muted-foreground">Emplois du Temps</p>
+          </div>
+        </Card>
       </div>
 
       {/* Quick Actions */}
@@ -193,13 +220,13 @@ export const SchoolAdminDashboard = ({ profile, userRole }: { profile: any; user
         <Button
           className="h-auto p-6 flex-col items-start gap-2"
           variant="outline"
-          disabled
+          onClick={() => navigate("/subjects")}
         >
-          <Calendar className="h-6 w-6" />
+          <Book className="h-6 w-6" />
           <div className="text-left">
-            <p className="font-semibold">Créer emploi du temps</p>
+            <p className="font-semibold">Gérer les matières</p>
             <p className="text-xs text-muted-foreground">
-              Disponible en Phase 3
+              Disciplines / Matières enseignées
             </p>
           </div>
         </Button>
@@ -207,13 +234,13 @@ export const SchoolAdminDashboard = ({ profile, userRole }: { profile: any; user
         <Button
           className="h-auto p-6 flex-col items-start gap-2"
           variant="outline"
-          disabled
+          onClick={() => navigate("/timetables")}
         >
-          <BookOpen className="h-6 w-6" />
+          <Calendar className="h-6 w-6" />
           <div className="text-left">
-            <p className="font-semibold">Gérer les matières</p>
+            <p className="font-semibold">Gérer les emplois du temps</p>
             <p className="text-xs text-muted-foreground">
-              Disponible en Phase 2
+              Créer et gérer les horaires
             </p>
           </div>
         </Button>
