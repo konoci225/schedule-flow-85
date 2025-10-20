@@ -1,11 +1,11 @@
 -- 20251020_120000__full_scheduler_stack.sql
 -- Full scheduling stack: school settings, academic years/terms, time slots & exceptions,
 -- teacher (in)availabilities, attendances, announcements, notifications, generation jobs, timetable versions.
--- Additive only. Requires existing helpers: public.is_super_admin(uuid), public.has_role(uuid, text)
+-- Additive only. Requires helpers: public.is_super_admin(uuid), public.has_role(uuid, app_role)
 
 begin;
 
--- ENUMS (create if not exists pattern)
+-- ENUMS (create if not exists)
 do $$
 begin
   if not exists (select 1 from pg_type where typname = 'job_status') then
@@ -45,7 +45,7 @@ create policy "ss_write_admin" on public.school_settings
       select 1 from public.user_roles ur
       where ur.user_id = auth.uid()
         and ur.school_id = school_settings.school_id
-        and ur.role = 'school_admin'
+        and ur.role = 'school_admin'::app_role
     )
   );
 
@@ -78,7 +78,7 @@ create policy "ay_write_admin" on public.academic_years
       select 1 from public.user_roles ur
       where ur.user_id = auth.uid()
         and ur.school_id = academic_years.school_id
-        and ur.role = 'school_admin'
+        and ur.role = 'school_admin'::app_role
     )
   );
 
@@ -108,7 +108,7 @@ create policy "terms_write_admin" on public.terms
       select 1 from public.user_roles ur
       where ur.user_id = auth.uid()
         and ur.school_id = terms.school_id
-        and ur.role = 'school_admin'
+        and ur.role = 'school_admin'::app_role
     )
   );
 
@@ -143,7 +143,7 @@ create policy "slots_write_admin" on public.time_slots
       select 1 from public.user_roles ur
       where ur.user_id = auth.uid()
         and ur.school_id = time_slots.school_id
-        and ur.role = 'school_admin'
+        and ur.role = 'school_admin'::app_role
     )
   );
 
@@ -172,7 +172,7 @@ create policy "ce_write_admin" on public.calendar_exceptions
       select 1 from public.user_roles ur
       where ur.user_id = auth.uid()
         and ur.school_id = calendar_exceptions.school_id
-        and ur.role = 'school_admin'
+        and ur.role = 'school_admin'::app_role
     )
   );
 
@@ -202,7 +202,7 @@ create policy "ta_select_scope" on public.teacher_availabilities
 create policy "ta_write_scope" on public.teacher_availabilities
   for all using (
     public.is_super_admin(auth.uid())
-    or public.has_role(auth.uid(), 'school_admin')
+    or public.has_role(auth.uid(), 'school_admin'::app_role)
     or teacher_availabilities.teacher_id in (select t.id from public.teachers t where t.user_id = auth.uid())
   );
 
@@ -228,7 +228,7 @@ create policy "tu_select_scope" on public.teacher_unavailabilities
 create policy "tu_write_scope" on public.teacher_unavailabilities
   for all using (
     public.is_super_admin(auth.uid())
-    or public.has_role(auth.uid(), 'school_admin')
+    or public.has_role(auth.uid(), 'school_admin'::app_role)
     or teacher_unavailabilities.teacher_id in (select t.id from public.teachers t where t.user_id = auth.uid())
   );
 
@@ -261,7 +261,7 @@ create policy "att_select_scope" on public.attendances
 create policy "att_insert_scope" on public.attendances
   for insert with check (
     public.is_super_admin(auth.uid())
-    or public.has_role(auth.uid(), 'school_admin')
+    or public.has_role(auth.uid(), 'school_admin'::app_role)
     or new.teacher_id in (select t.id from public.teachers t where t.user_id = auth.uid())
   );
 
@@ -278,7 +278,7 @@ create table if not exists public.attendance_justifications (
 alter table public.attendance_justifications enable row level security;
 
 create policy "aj_select_scope" on public.attendance_justifications
-  for select using (public.is_super_admin(auth.uid()) or public.has_role(auth.uid(), 'school_admin'));
+  for select using (public.is_super_admin(auth.uid()) or public.has_role(auth.uid(), 'school_admin'::app_role));
 
 create policy "aj_insert_scope" on public.attendance_justifications
   for insert with check (
@@ -319,7 +319,7 @@ create policy "ann_write_admin" on public.announcements
     or exists (select 1 from public.user_roles ur
                where ur.user_id = auth.uid()
                  and ur.school_id = announcements.school_id
-                 and ur.role = 'school_admin')
+                 and ur.role = 'school_admin'::app_role)
   );
 
 create table if not exists public.notifications (
@@ -369,7 +369,7 @@ create policy "gj_write_admin" on public.generation_jobs
     or exists (select 1 from public.user_roles ur
                where ur.user_id = auth.uid()
                  and ur.school_id = generation_jobs.school_id
-                 and ur.role = 'school_admin')
+                 and ur.role = 'school_admin'::app_role)
   );
 
 -- ================================
@@ -397,7 +397,7 @@ create policy "tv_write_admin" on public.timetable_versions
     or exists (select 1 from public.user_roles ur
                where ur.user_id = auth.uid()
                  and ur.school_id = timetable_versions.school_id
-                 and ur.role = 'school_admin')
+                 and ur.role = 'school_admin'::app_role)
   );
 
 commit;
