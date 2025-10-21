@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { School, Building2, Users, Shield, LayoutDashboard } from "lucide-react";
+import { School, Building2, Users, Shield, LayoutDashboard, BookOpen, Calendar, DoorOpen, Settings, Clock, CalendarDays, Megaphone } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -46,6 +46,54 @@ export function AppSidebar({ userRole }: AppSidebarProps) {
       url: "/admins",
       icon: Shield,
       roles: ["super_admin"],
+    },
+    {
+      title: "Classes",
+      url: "/classes",
+      icon: School,
+      roles: ["school_admin"],
+    },
+    {
+      title: "Salles",
+      url: "/rooms",
+      icon: DoorOpen,
+      roles: ["school_admin"],
+    },
+    {
+      title: "Matières",
+      url: "/subjects",
+      icon: BookOpen,
+      roles: ["school_admin"],
+    },
+    {
+      title: "Emplois du temps",
+      url: "/timetables",
+      icon: Calendar,
+      roles: ["school_admin"],
+    },
+    {
+      title: "Années scolaires",
+      url: "/academic-years",
+      icon: CalendarDays,
+      roles: ["school_admin"],
+    },
+    {
+      title: "Créneaux horaires",
+      url: "/time-slots",
+      icon: Clock,
+      roles: ["school_admin"],
+    },
+    {
+      title: "Annonces",
+      url: "/announcements",
+      icon: Megaphone,
+      roles: ["school_admin"],
+    },
+    {
+      title: "Paramètres",
+      url: "/school-settings",
+      icon: Settings,
+      roles: ["school_admin"],
     },
   ];
 

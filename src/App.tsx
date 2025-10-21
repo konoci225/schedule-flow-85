@@ -17,6 +17,10 @@ import Classes from "./pages/Classes";
 import Rooms from "./pages/Rooms";
 import Subjects from "./pages/Subjects";
 import Timetables from "./pages/Timetables";
+import SchoolSettings from "./pages/SchoolSettings";
+import AcademicYears from "./pages/AcademicYears";
+import TimeSlots from "./pages/TimeSlots";
+import Announcements from "./pages/Announcements";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +46,10 @@ const App = () => (
           <Route path="/rooms" element={<Rooms />} />
           <Route path="/subjects" element={<Subjects />} />
           <Route path="/timetables" element={<Timetables />} />
+          <Route path="/school-settings" element={<SchoolSettings />} />
+          <Route path="/academic-years" element={<AcademicYears />} />
+          <Route path="/time-slots" element={<TimeSlots />} />
+          <Route path="/announcements" element={<Announcements />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

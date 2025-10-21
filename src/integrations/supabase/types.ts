@@ -14,6 +14,243 @@ export type Database = {
   }
   public: {
     Tables: {
+      academic_years: {
+        Row: {
+          code: string
+          created_at: string | null
+          ends_on: string
+          id: string
+          is_active: boolean | null
+          school_id: string
+          starts_on: string
+          updated_at: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          ends_on: string
+          id?: string
+          is_active?: boolean | null
+          school_id: string
+          starts_on: string
+          updated_at?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          ends_on?: string
+          id?: string
+          is_active?: boolean | null
+          school_id?: string
+          starts_on?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academic_years_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      announcements: {
+        Row: {
+          audience: string | null
+          body: string
+          created_at: string | null
+          created_by: string
+          id: string
+          published_at: string | null
+          school_id: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          audience?: string | null
+          body: string
+          created_at?: string | null
+          created_by: string
+          id?: string
+          published_at?: string | null
+          school_id: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          audience?: string | null
+          body?: string
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          published_at?: string | null
+          school_id?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcements_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendance_justifications: {
+        Row: {
+          attendance_id: string
+          created_at: string | null
+          decided_at: string | null
+          decided_by: string | null
+          decision: Database["public"]["Enums"]["justification_decision"] | null
+          file_url: string | null
+          id: string
+          reason: string
+          updated_at: string | null
+        }
+        Insert: {
+          attendance_id: string
+          created_at?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          decision?:
+            | Database["public"]["Enums"]["justification_decision"]
+            | null
+          file_url?: string | null
+          id?: string
+          reason: string
+          updated_at?: string | null
+        }
+        Update: {
+          attendance_id?: string
+          created_at?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          decision?:
+            | Database["public"]["Enums"]["justification_decision"]
+            | null
+          file_url?: string | null
+          id?: string
+          reason?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_justifications_attendance_id_fkey"
+            columns: ["attendance_id"]
+            isOneToOne: false
+            referencedRelation: "attendances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendances: {
+        Row: {
+          accuracy_m: number | null
+          created_at: string | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          method: Database["public"]["Enums"]["attendance_method"] | null
+          notes: string | null
+          occurred_at: string
+          status: Database["public"]["Enums"]["attendance_status"] | null
+          teacher_id: string
+          timetable_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          accuracy_m?: number | null
+          created_at?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          method?: Database["public"]["Enums"]["attendance_method"] | null
+          notes?: string | null
+          occurred_at?: string
+          status?: Database["public"]["Enums"]["attendance_status"] | null
+          teacher_id: string
+          timetable_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          accuracy_m?: number | null
+          created_at?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          method?: Database["public"]["Enums"]["attendance_method"] | null
+          notes?: string | null
+          occurred_at?: string
+          status?: Database["public"]["Enums"]["attendance_status"] | null
+          teacher_id?: string
+          timetable_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendances_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendances_timetable_id_fkey"
+            columns: ["timetable_id"]
+            isOneToOne: false
+            referencedRelation: "timetables"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calendar_exceptions: {
+        Row: {
+          availability:
+            | Database["public"]["Enums"]["calendar_availability"]
+            | null
+          created_at: string | null
+          date: string
+          id: string
+          reason: string | null
+          school_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          availability?:
+            | Database["public"]["Enums"]["calendar_availability"]
+            | null
+          created_at?: string | null
+          date: string
+          id?: string
+          reason?: string | null
+          school_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          availability?:
+            | Database["public"]["Enums"]["calendar_availability"]
+            | null
+          created_at?: string | null
+          date?: string
+          id?: string
+          reason?: string | null
+          school_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_exceptions_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       classes: {
         Row: {
           academic_year: string | null
@@ -54,6 +291,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "classes_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      generation_jobs: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          error: string | null
+          finished_at: string | null
+          id: string
+          params: Json | null
+          result: Json | null
+          school_id: string
+          started_at: string | null
+          status: Database["public"]["Enums"]["job_status"] | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          params?: Json | null
+          result?: Json | null
+          school_id: string
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["job_status"] | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          params?: Json | null
+          result?: Json | null
+          school_id?: string
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["job_status"] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generation_jobs_school_id_fkey"
             columns: ["school_id"]
             isOneToOne: false
             referencedRelation: "schools"
@@ -104,6 +391,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string | null
+          id: string
+          payload: Json | null
+          read_at: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string | null
+          id?: string
+          payload?: Json | null
+          read_at?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string | null
+          id?: string
+          payload?: Json | null
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -217,6 +537,59 @@ export type Database = {
           },
         ]
       }
+      school_settings: {
+        Row: {
+          attendance_window_after_min: number | null
+          attendance_window_before_min: number | null
+          created_at: string | null
+          geofence_enabled: boolean | null
+          geofence_latitude: number | null
+          geofence_longitude: number | null
+          geofence_radius_m: number | null
+          id: string
+          school_id: string
+          timezone: string | null
+          updated_at: string | null
+          week_start: number | null
+        }
+        Insert: {
+          attendance_window_after_min?: number | null
+          attendance_window_before_min?: number | null
+          created_at?: string | null
+          geofence_enabled?: boolean | null
+          geofence_latitude?: number | null
+          geofence_longitude?: number | null
+          geofence_radius_m?: number | null
+          id?: string
+          school_id: string
+          timezone?: string | null
+          updated_at?: string | null
+          week_start?: number | null
+        }
+        Update: {
+          attendance_window_after_min?: number | null
+          attendance_window_before_min?: number | null
+          created_at?: string | null
+          geofence_enabled?: boolean | null
+          geofence_latitude?: number | null
+          geofence_longitude?: number | null
+          geofence_radius_m?: number | null
+          id?: string
+          school_id?: string
+          timezone?: string | null
+          updated_at?: string | null
+          week_start?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_settings_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: true
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       schools: {
         Row: {
           address: string | null
@@ -324,6 +697,53 @@ export type Database = {
           },
         ]
       }
+      teacher_availabilities: {
+        Row: {
+          created_at: string | null
+          day_of_week: number
+          end_time: string
+          id: string
+          preference:
+            | Database["public"]["Enums"]["availability_preference"]
+            | null
+          start_time: string
+          teacher_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          day_of_week: number
+          end_time: string
+          id?: string
+          preference?:
+            | Database["public"]["Enums"]["availability_preference"]
+            | null
+          start_time: string
+          teacher_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          preference?:
+            | Database["public"]["Enums"]["availability_preference"]
+            | null
+          start_time?: string
+          teacher_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_availabilities_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teacher_subjects: {
         Row: {
           created_at: string | null
@@ -353,6 +773,44 @@ export type Database = {
           },
           {
             foreignKeyName: "teacher_subjects_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teacher_unavailabilities: {
+        Row: {
+          created_at: string | null
+          end_at: string
+          id: string
+          reason: string | null
+          start_at: string
+          teacher_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          end_at: string
+          id?: string
+          reason?: string | null
+          start_at: string
+          teacher_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          end_at?: string
+          id?: string
+          reason?: string | null
+          start_at?: string
+          teacher_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_unavailabilities_teacher_id_fkey"
             columns: ["teacher_id"]
             isOneToOne: false
             referencedRelation: "teachers"
@@ -427,6 +885,133 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "teachers_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      terms: {
+        Row: {
+          academic_year_id: string
+          created_at: string | null
+          ends_on: string
+          id: string
+          name: string
+          school_id: string
+          starts_on: string
+          updated_at: string | null
+        }
+        Insert: {
+          academic_year_id: string
+          created_at?: string | null
+          ends_on: string
+          id?: string
+          name: string
+          school_id: string
+          starts_on: string
+          updated_at?: string | null
+        }
+        Update: {
+          academic_year_id?: string
+          created_at?: string | null
+          ends_on?: string
+          id?: string
+          name?: string
+          school_id?: string
+          starts_on?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "terms_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "terms_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      time_slots: {
+        Row: {
+          created_at: string | null
+          day_of_week: number
+          end_time: string
+          id: string
+          is_active: boolean | null
+          label: string | null
+          school_id: string
+          start_time: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          day_of_week: number
+          end_time: string
+          id?: string
+          is_active?: boolean | null
+          label?: string | null
+          school_id: string
+          start_time: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          is_active?: boolean | null
+          label?: string | null
+          school_id?: string
+          start_time?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_slots_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      timetable_versions: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          id: string
+          label: string
+          school_id: string
+          snapshot: Json
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          id?: string
+          label: string
+          school_id: string
+          snapshot: Json
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          label?: string
+          school_id?: string
+          snapshot?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timetable_versions_school_id_fkey"
             columns: ["school_id"]
             isOneToOne: false
             referencedRelation: "schools"
@@ -569,7 +1154,17 @@ export type Database = {
     }
     Enums: {
       app_role: "super_admin" | "school_admin" | "teacher"
+      attendance_method: "geofence" | "qr" | "nfc" | "manual"
+      attendance_status: "present" | "late" | "absent" | "excused"
+      availability_preference:
+        | "preferred"
+        | "available"
+        | "if_needed"
+        | "unavailable"
+      calendar_availability: "open" | "closed" | "half_day"
       gender: "male" | "female" | "other"
+      job_status: "queued" | "running" | "succeeded" | "failed" | "cancelled"
+      justification_decision: "pending" | "approved" | "rejected"
       school_type:
         | "primary"
         | "middle_school"
@@ -705,7 +1300,18 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["super_admin", "school_admin", "teacher"],
+      attendance_method: ["geofence", "qr", "nfc", "manual"],
+      attendance_status: ["present", "late", "absent", "excused"],
+      availability_preference: [
+        "preferred",
+        "available",
+        "if_needed",
+        "unavailable",
+      ],
+      calendar_availability: ["open", "closed", "half_day"],
       gender: ["male", "female", "other"],
+      job_status: ["queued", "running", "succeeded", "failed", "cancelled"],
+      justification_decision: ["pending", "approved", "rejected"],
       school_type: [
         "primary",
         "middle_school",
