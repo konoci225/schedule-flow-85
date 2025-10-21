@@ -27,16 +27,15 @@ type Gender = "male" | "female" | "other" | "";
 type Status = "permanent" | "contract" | "substitute" | "";
 
 interface School {
-  id: string | number;
+  id: string;
   name: string;
-  is_active?: boolean;
 }
 
 interface Subject {
-  id: string | number;
+  id: string;
   code: string;
   name: string;
-  school_id: string | number;
+  school_id: string;
 }
 
 export default function TeacherRegistration() {
@@ -96,59 +95,71 @@ export default function TeacherRegistration() {
     }
   }, [formData.school_id]);
 
+  // ============================
+  // ✅ REMPLACÉ : appel Edge Function public-schools
+  // ============================
   const fetchSchools = async () => {
-    const { data, error } = await supabase
-      .from("schools")
-      .select("id,name,is_active")
-      .eq("is_active", true)
-      .order("name");
+    try {
+      const { data, error } = await supabase.functions.invoke("public-schools", { body: {} });
+      if (error) throw error;
 
-    if (error) {
-      console.error(error);
+      const list: School[] = (data?.schools ?? []).map((s: any) => ({
+        id: String(s.id),
+        name: s.name,
+      }));
+
+      setSchools(list);
+
+      if (list.length === 0) {
+        toast({
+          title: "Aucune école disponible",
+          description: "Aucune école active n'a été trouvée.",
+        });
+      }
+    } catch (err: any) {
+      console.error(err);
       toast({
         variant: "destructive",
         title: "Erreur écoles",
-        description: error.message,
+        description: err?.message || String(err),
       });
       setSchools([]);
-      return;
-    }
-
-    setSchools(data ?? []);
-    if (!data || data.length === 0) {
-      toast({
-        title: "Aucune école disponible",
-        description:
-          "Aucune école active visible. Vérifiez les règles RLS pour la lecture publique des écoles actives.",
-      });
     }
   };
 
+  // ============================
+  // ✅ REMPLACÉ : appel Edge Function public-subjects
+  // ============================
   const fetchSubjects = async (schoolId: string) => {
-    const { data, error } = await supabase
-      .from("subjects")
-      .select("id,code,name,school_id")
-      .eq("school_id", schoolId)
-      .order("name");
+    try {
+      const { data, error } = await supabase.functions.invoke("public-subjects", {
+        body: { school_id: schoolId },
+      });
+      if (error) throw error;
 
-    if (error) {
-      console.error(error);
+      const list: Subject[] = (data?.subjects ?? []).map((s: any) => ({
+        id: String(s.id),
+        code: s.code,
+        name: s.name,
+        school_id: String(s.school_id),
+      }));
+
+      setSubjects(list);
+
+      if (list.length === 0) {
+        toast({
+          title: "Aucune matière configurée",
+          description: "Aucune matière trouvée pour cet établissement.",
+        });
+      }
+    } catch (err: any) {
+      console.error(err);
       toast({
         variant: "destructive",
         title: "Erreur matières",
-        description: error.message,
+        description: err?.message || String(err),
       });
       setSubjects([]);
-      return;
-    }
-
-    setSubjects(data ?? []);
-    if (!data || data.length === 0) {
-      toast({
-        title: "Aucune matière configurée",
-        description:
-          "Aucune matière trouvée pour cet établissement (ou accès RLS non autorisé).",
-      });
     }
   };
 
@@ -443,7 +454,7 @@ export default function TeacherRegistration() {
                   </SelectTrigger>
                   <SelectContent>
                     {schools.map((s) => (
-                      <SelectItem key={String(s.id)} value={String(s.id)}>
+                      <SelectItem key={s.id} value={s.id}>
                         {s.name}
                       </SelectItem>
                     ))}
@@ -459,7 +470,7 @@ export default function TeacherRegistration() {
                 {subjects.length > 0 ? (
                   <div className="border rounded-lg p-4 space-y-2 max-h-56 overflow-y-auto">
                     {subjects.map((subject) => {
-                      const sid = String(subject.id);
+                      const sid = subject.id;
                       const checked = selectedSubjects.includes(sid);
                       return (
                         <div key={sid} className="flex items-center space-x-2">
