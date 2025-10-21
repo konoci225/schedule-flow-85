@@ -1,18 +1,24 @@
 // supabase/functions/public-schools/index.ts
-// Deno Edge Function — liste des écoles actives
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.46.1";
 
+// ⚠️ Pour serrer la sécurité, remplace * par ton domaine:
+// const ALLOWED_ORIGIN = "https://schedule-flow-85.lovable.app";
+const ALLOWED_ORIGIN = "*";
+
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*", // ou mets ton domaine exact si tu veux restreindre
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-authorization",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Max-Age": "86400",
+  Vary: "Origin",
 };
 
 Deno.serve(async (req) => {
-  // ✅ Preflight CORS
+  // ✅ Preflight
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response("ok", { status: 200, headers: corsHeaders });
   }
 
   try {
@@ -25,7 +31,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // client admin (service role)
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 
     const { data, error } = await admin
