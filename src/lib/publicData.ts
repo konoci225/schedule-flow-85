@@ -1,6 +1,9 @@
-import { supabase } from "./supabaseClient";
+// ⬅️ On importe le client SUPABASE déjà défini par Lovable
+import { supabase } from "@/integrations/supabase/client";
 
-// Ecoles actives
+/**
+ * Ecoles actives (lecture publique via RLS)
+ */
 export async function getPublicSchools() {
   const { data, error } = await supabase
     .from("schools")
@@ -12,7 +15,9 @@ export async function getPublicSchools() {
   return data ?? [];
 }
 
-// Matières d'une école
+/**
+ * Matières d'une école
+ */
 export async function getPublicSubjectsBySchool(schoolId: string) {
   const { data, error } = await supabase
     .from("subjects")
