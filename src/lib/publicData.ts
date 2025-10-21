@@ -1,3 +1,21 @@
+// src/lib/publicData.ts
+export async function getPublicSchools() {
+  const { data, error } = await supabase
+    .from("schools")
+    .select("id, name, is_active")
+    .eq("is_active", true)
+    .order("name", { ascending: true });
+
+  if (error) {
+    console.error("[getPublicSchools] RLS/SQL error:", error);
+    throw error;
+  }
+  console.log("[getPublicSchools] rows:", data?.length ?? 0);
+  return data ?? [];
+}
+
+
+
 // ✅ Utilise le client Supabase unique généré par Lovable
 import { supabase } from "@/integrations/supabase/client";
 
