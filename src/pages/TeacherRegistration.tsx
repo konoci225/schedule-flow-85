@@ -81,9 +81,14 @@ export default function TeacherRegistration() {
     qualifications: "",
   });
 
+  // URL de base des Edge Functions (évite invoke pour contourner CORS strict)
+  const FUNCTION_BASE =
+    `${import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, "")}/functions/v1`;
+
   // ------- Fetch data
   useEffect(() => {
     fetchSchools();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -93,17 +98,27 @@ export default function TeacherRegistration() {
       setSubjects([]);
       setSelectedSubjects([]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.school_id]);
 
   // ============================
-  // ✅ REMPLACÉ : appel Edge Function public-schools
+  // Appel Edge Function public-schools via fetch (CORS-friendly)
   // ============================
   const fetchSchools = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke("public-schools", { body: {} });
-      if (error) throw error;
+      const res = await fetch(`${FUNCTION_BASE}/public-schools`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
 
-      const list: School[] = (data?.schools ?? []).map((s: any) => ({
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(`HTTP ${res.status} — ${txt}`);
+      }
+
+      const json = await res.json();
+      const list: School[] = (json?.schools ?? []).map((s: any) => ({
         id: String(s.id),
         name: s.name,
       }));
@@ -128,16 +143,23 @@ export default function TeacherRegistration() {
   };
 
   // ============================
-  // ✅ REMPLACÉ : appel Edge Function public-subjects
+  // Appel Edge Function public-subjects via fetch (CORS-friendly)
   // ============================
   const fetchSubjects = async (schoolId: string) => {
     try {
-      const { data, error } = await supabase.functions.invoke("public-subjects", {
-        body: { school_id: schoolId },
+      const res = await fetch(`${FUNCTION_BASE}/public-subjects`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ school_id: schoolId }),
       });
-      if (error) throw error;
 
-      const list: Subject[] = (data?.subjects ?? []).map((s: any) => ({
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(`HTTP ${res.status} — ${txt}`);
+      }
+
+      const json = await res.json();
+      const list: Subject[] = (json?.subjects ?? []).map((s: any) => ({
         id: String(s.id),
         code: s.code,
         name: s.name,
