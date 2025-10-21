@@ -30,7 +30,6 @@ interface School {
   id: string;
   name: string;
 }
-
 interface Subject {
   id: string;
   code: string;
@@ -51,7 +50,7 @@ export default function TeacherRegistration() {
     first_name: string;
     last_name: string;
     gender: Gender;
-    school_id: string; // toujours string dans le Select
+    school_id: string;
     phone: string;
     matricule: string;
     status: Status;
@@ -81,106 +80,47 @@ export default function TeacherRegistration() {
     qualifications: "",
   });
 
-  // URL de base des Edge Functions (évite invoke pour contourner CORS strict)
-  const FUNCTION_BASE =
-    `${import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, "")}/functions/v1`;
+  // Base URL des Functions
+  const FUNCTION_BASE = `${import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, "")}/functions/v1`;
 
-  // ------- Fetch data
+  useEffect(() => { fetchSchools(); /* eslint-disable-next-line */ }, []);
   useEffect(() => {
-    fetchSchools();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (formData.school_id) {
-      fetchSubjects(formData.school_id);
-    } else {
-      setSubjects([]);
-      setSelectedSubjects([]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (formData.school_id) fetchSubjects(formData.school_id);
+    else { setSubjects([]); setSelectedSubjects([]); }
+    // eslint-disable-next-line
   }, [formData.school_id]);
 
-  // ============================
-  // Appel Edge Function public-schools via fetch (CORS-friendly)
-  // ============================
+  // ====== GET SANS HEADERS/BODY (pas de préflight) ======
   const fetchSchools = async () => {
     try {
-      const res = await fetch(`${FUNCTION_BASE}/public-schools`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(`HTTP ${res.status} — ${txt}`);
-      }
-
+      const res = await fetch(`${FUNCTION_BASE}/public-schools`, { method: "GET" });
+      if (!res.ok) throw new Error(`HTTP ${res.status} ${await res.text()}`);
       const json = await res.json();
-      const list: School[] = (json?.schools ?? []).map((s: any) => ({
-        id: String(s.id),
-        name: s.name,
-      }));
-
+      const list: School[] = (json?.schools ?? []).map((s: any) => ({ id: String(s.id), name: s.name }));
       setSchools(list);
-
-      if (list.length === 0) {
-        toast({
-          title: "Aucune école disponible",
-          description: "Aucune école active n'a été trouvée.",
-        });
-      }
+      if (list.length === 0) toast({ title: "Aucune école disponible", description: "Aucune école active trouvée." });
     } catch (err: any) {
       console.error(err);
-      toast({
-        variant: "destructive",
-        title: "Erreur écoles",
-        description: err?.message || String(err),
-      });
+      toast({ variant: "destructive", title: "Erreur écoles", description: err?.message || "Failed to fetch" });
       setSchools([]);
     }
   };
 
-  // ============================
-  // Appel Edge Function public-subjects via fetch (CORS-friendly)
-  // ============================
   const fetchSubjects = async (schoolId: string) => {
     try {
-      const res = await fetch(`${FUNCTION_BASE}/public-subjects`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ school_id: schoolId }),
-      });
-
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(`HTTP ${res.status} — ${txt}`);
-      }
-
+      const url = new URL(`${FUNCTION_BASE}/public-subjects`);
+      url.searchParams.set("school_id", schoolId); // GET query param
+      const res = await fetch(url.toString(), { method: "GET" });
+      if (!res.ok) throw new Error(`HTTP ${res.status} ${await res.text()}`);
       const json = await res.json();
       const list: Subject[] = (json?.subjects ?? []).map((s: any) => ({
-        id: String(s.id),
-        code: s.code,
-        name: s.name,
-        school_id: String(s.school_id),
+        id: String(s.id), code: s.code, name: s.name, school_id: String(s.school_id),
       }));
-
       setSubjects(list);
-
-      if (list.length === 0) {
-        toast({
-          title: "Aucune matière configurée",
-          description: "Aucune matière trouvée pour cet établissement.",
-        });
-      }
+      if (list.length === 0) toast({ title: "Aucune matière configurée", description: "Rien pour cet établissement." });
     } catch (err: any) {
       console.error(err);
-      toast({
-        variant: "destructive",
-        title: "Erreur matières",
-        description: err?.message || String(err),
-      });
+      toast({ variant: "destructive", title: "Erreur matières", description: err?.message || "Failed to fetch" });
       setSubjects([]);
     }
   };
@@ -189,229 +129,115 @@ export default function TeacherRegistration() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // validations front
-    if (
-      !formData.first_name ||
-      !formData.last_name ||
-      !formData.gender ||
-      !formData.school_id ||
-      !formData.phone ||
-      !formData.matricule ||
-      !formData.status
-    ) {
-      toast({
-        title: "Erreur",
-        description: "Champs obligatoires manquants.",
-        variant: "destructive",
-      });
-      return;
+    if (!formData.first_name || !formData.last_name || !formData.gender ||
+        !formData.school_id || !formData.phone || !formData.matricule || !formData.status) {
+      toast({ title: "Erreur", description: "Champs obligatoires manquants.", variant: "destructive" }); return;
     }
-    if (!formData.email) {
-      toast({
-        title: "Email requis",
-        description: "L’email professionnel est obligatoire.",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!formData.email) { toast({ title: "Email requis", description: "L’email est obligatoire.", variant: "destructive" }); return; }
     if (!formData.password || formData.password !== formData.confirm_password) {
-      toast({
-        title: "Mot de passe",
-        description: "Les mots de passe ne correspondent pas.",
-        variant: "destructive",
-      });
-      return;
+      toast({ title: "Mot de passe", description: "Les mots de passe ne correspondent pas.", variant: "destructive" }); return;
     }
     if (selectedSubjects.length === 0) {
-      toast({
-        title: "Erreur",
-        description: "Sélectionnez au moins une matière.",
-        variant: "destructive",
-      });
-      return;
+      toast({ title: "Erreur", description: "Sélectionnez au moins une matière.", variant: "destructive" }); return;
     }
 
     setLoading(true);
     try {
-      // 1) Créer le compte auth
+      // 1) Auth
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
-          data: {
-            first_name: formData.first_name,
-            last_name: formData.last_name,
-            phone: formData.phone,
-          },
+          data: { first_name: formData.first_name, last_name: formData.last_name, phone: formData.phone },
           emailRedirectTo: `${window.location.origin}/auth`,
         },
       });
-
       if (signUpError) {
         const msg = (signUpError.message || "").toLowerCase();
         if (msg.includes("already") || msg.includes("registered") || signUpError.status === 422) {
-          toast({
-            variant: "destructive",
-            title: "Email déjà utilisé",
-            description:
-              "Cet email est déjà associé à un compte. Connectez-vous ou utilisez « Mot de passe oublié ».",
-          });
-          setLoading(false);
-          return;
+          toast({ variant: "destructive", title: "Email déjà utilisé",
+            description: "Connectez-vous ou utilisez « Mot de passe oublié »." });
+          setLoading(false); return;
         }
         throw signUpError;
       }
+      const user = authData.user; if (!user) throw new Error("Création du compte échouée.");
 
-      const user = authData.user;
-      if (!user) throw new Error("Création du compte échouée.");
-
-      // 2) UPSERT profiles (idempotent)
+      // 2) profiles (UPSERT)
       const { data: existingProfile, error: profSelectErr } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("id", user.id)
-        .maybeSingle();
+        .from("profiles").select("id").eq("id", user.id).maybeSingle();
       if (profSelectErr) throw profSelectErr;
-
       if (!existingProfile) {
-        const { error: pInsErr } = await supabase.from("profiles").insert({
-          id: user.id,
-          first_name: formData.first_name,
-          last_name: formData.last_name,
-          phone: formData.phone,
-          gender: formData.gender as any,
-          school_id: formData.school_id,
-          birth_date: formData.birth_date || null,
-          birth_place: formData.birth_place || null,
-          address: formData.address || null,
-          matricule: formData.matricule || null,
-        });
-        if (pInsErr) throw pInsErr;
+        const { error } = await supabase.from("profiles").insert({
+          id: user.id, first_name: formData.first_name, last_name: formData.last_name,
+          phone: formData.phone, gender: formData.gender as any, school_id: formData.school_id,
+          birth_date: formData.birth_date || null, birth_place: formData.birth_place || null,
+          address: formData.address || null, matricule: formData.matricule || null,
+        }); if (error) throw error;
       } else {
-        const { error: pUpdErr } = await supabase
-          .from("profiles")
-          .update({
-            first_name: formData.first_name,
-            last_name: formData.last_name,
-            phone: formData.phone,
-            gender: formData.gender as any,
-            school_id: formData.school_id,
-            birth_date: formData.birth_date || null,
-            birth_place: formData.birth_place || null,
-            address: formData.address || null,
-            matricule: formData.matricule || null,
-          })
-          .eq("id", user.id);
-        if (pUpdErr) throw pUpdErr;
+        const { error } = await supabase.from("profiles").update({
+          first_name: formData.first_name, last_name: formData.last_name, phone: formData.phone,
+          gender: formData.gender as any, school_id: formData.school_id, birth_date: formData.birth_date || null,
+          birth_place: formData.birth_place || null, address: formData.address || null, matricule: formData.matricule || null,
+        }).eq("id", user.id); if (error) throw error;
       }
 
-      // 3) UPSERT user_roles (user_id + role + school_id)
+      // 3) user_roles (insert si manquant)
       const { data: existingRole, error: roleSelectErr } = await supabase
-        .from("user_roles")
-        .select("user_id,role,school_id")
-        .eq("user_id", user.id)
-        .eq("role", "teacher")
-        .eq("school_id", formData.school_id)
-        .maybeSingle();
+        .from("user_roles").select("user_id,role,school_id")
+        .eq("user_id", user.id).eq("role", "teacher").eq("school_id", formData.school_id).maybeSingle();
       if (roleSelectErr) throw roleSelectErr;
-
       if (!existingRole) {
-        const { error: rInsErr } = await supabase.from("user_roles").insert({
-          user_id: user.id,
-          role: "teacher",
-          school_id: formData.school_id,
-        });
-        if (rInsErr) throw rInsErr;
+        const { error } = await supabase.from("user_roles").insert({
+          user_id: user.id, role: "teacher", school_id: formData.school_id,
+        }); if (error) throw error;
       }
 
-      // 4) UPSERT teachers (clé logique = user_id)
-      const { data: existingTeacher, error: tSelectErr } = await supabase
-        .from("teachers")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      if (tSelectErr) throw tSelectErr;
+      // 4) teachers (UPSERT by user_id)
+      const { data: existingTeacher, error: tSelErr } = await supabase
+        .from("teachers").select("id").eq("user_id", user.id).maybeSingle();
+      if (tSelErr) throw tSelErr;
 
       let teacherId: string;
       if (!existingTeacher) {
-        const { data: teacher, error: tInsErr } = await supabase
-          .from("teachers")
-          .insert([{
-            first_name: formData.first_name,
-            last_name: formData.last_name,
-            gender: formData.gender as any,
-            school_id: formData.school_id,
-            phone: formData.phone,
-            matricule: formData.matricule,
-            status: formData.status as any,
-            email: formData.email,
-            birth_date: formData.birth_date || null,
-            birth_place: formData.birth_place || null,
-            address: formData.address || null,
-            diploma: formData.diploma || null,
-            qualifications: formData.qualifications || null,
-            user_id: user.id,
-            is_approved: false,
-          }])
-          .select()
-          .single();
-        if (tInsErr) throw tInsErr;
-        teacherId = teacher.id;
+        const { data: teacher, error } = await supabase.from("teachers").insert([{
+          first_name: formData.first_name, last_name: formData.last_name,
+          gender: formData.gender as any, school_id: formData.school_id, phone: formData.phone,
+          matricule: formData.matricule, status: formData.status as any, email: formData.email,
+          birth_date: formData.birth_date || null, birth_place: formData.birth_place || null,
+          address: formData.address || null, diploma: formData.diploma || null,
+          qualifications: formData.qualifications || null, user_id: user.id, is_approved: false,
+        }]).select().single(); if (error) throw error; teacherId = teacher.id;
       } else {
         teacherId = existingTeacher.id as unknown as string;
-        const { error: tUpdErr } = await supabase
-          .from("teachers")
-          .update({
-            first_name: formData.first_name,
-            last_name: formData.last_name,
-            gender: formData.gender as any,
-            school_id: formData.school_id,
-            phone: formData.phone,
-            matricule: formData.matricule,
-            status: formData.status as any,
-            email: formData.email,
-            birth_date: formData.birth_date || null,
-            birth_place: formData.birth_place || null,
-            address: formData.address || null,
-            diploma: formData.diploma || null,
-            qualifications: formData.qualifications || null,
-          })
-          .eq("id", teacherId);
-        if (tUpdErr) throw tUpdErr;
+        const { error } = await supabase.from("teachers").update({
+          first_name: formData.first_name, last_name: formData.last_name,
+          gender: formData.gender as any, school_id: formData.school_id, phone: formData.phone,
+          matricule: formData.matricule, status: formData.status as any, email: formData.email,
+          birth_date: formData.birth_date || null, birth_place: formData.birth_place || null,
+          address: formData.address || null, diploma: formData.diploma || null,
+          qualifications: formData.qualifications || null,
+        }).eq("id", teacherId); if (error) throw error;
 
-        // On nettoie les matières existantes avant de remettre les choix
         await supabase.from("teacher_subjects").delete().eq("teacher_id", teacherId);
       }
 
-      // 5) (Ré)insérer les matières choisies
-      const subjectInserts = selectedSubjects.map((subjectId) => ({
-        teacher_id: teacherId,
-        subject_id: subjectId,
-      }));
-      if (subjectInserts.length > 0) {
-        const { error: sErr } = await supabase.from("teacher_subjects").insert(subjectInserts);
-        if (sErr) throw sErr;
+      // 5) matières
+      const rows = selectedSubjects.map((subjectId) => ({ teacher_id: teacherId, subject_id: subjectId }));
+      if (rows.length > 0) {
+        const { error } = await supabase.from("teacher_subjects").insert(rows);
+        if (error) throw error;
       }
 
-      toast({
-        title: "Inscription soumise",
-        description:
-          "Votre compte a été créé ou mis à jour. Vérifiez l’email de confirmation si requis puis attendez la validation.",
-      });
+      toast({ title: "Inscription soumise",
+        description: "Compte créé/mis à jour. Vérifiez l’email puis attendez la validation." });
       navigate("/auth");
     } catch (error: any) {
       console.error(error);
-      toast({
-        title: "Erreur",
-        description: error.message || "Une erreur est survenue.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+      toast({ title: "Erreur", description: error.message || "Une erreur est survenue.", variant: "destructive" });
+    } finally { setLoading(false); }
   };
 
-  // ------- UI
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5 flex items-center justify-center p-4">
       <Card className="w-full max-w-3xl">
@@ -429,34 +255,22 @@ export default function TeacherRegistration() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="first_name">Prénom *</Label>
-                <Input
-                  id="first_name"
-                  value={formData.first_name}
-                  onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                  required
-                />
+                <Input id="first_name" value={formData.first_name}
+                  onChange={(e) => setFormData({ ...formData, first_name: e.target.value })} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="last_name">Nom *</Label>
-                <Input
-                  id="last_name"
-                  value={formData.last_name}
-                  onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                  required
-                />
+                <Input id="last_name" value={formData.last_name}
+                  onChange={(e) => setFormData({ ...formData, last_name: e.target.value })} required />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="gender">Sexe *</Label>
-                <Select
-                  value={formData.gender}
-                  onValueChange={(value: Gender) => setFormData({ ...formData, gender: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner..." />
-                  </SelectTrigger>
+                <Select value={formData.gender}
+                  onValueChange={(value: Gender) => setFormData({ ...formData, gender: value })}>
+                  <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="male">Homme</SelectItem>
                     <SelectItem value="female">Femme</SelectItem>
@@ -467,19 +281,13 @@ export default function TeacherRegistration() {
 
               <div className="space-y-2">
                 <Label htmlFor="school_id">Établissement *</Label>
-                <Select
-                  value={formData.school_id}
-                  onValueChange={(value) => setFormData({ ...formData, school_id: value })}
-                >
+                <Select value={formData.school_id}
+                  onValueChange={(value) => setFormData({ ...formData, school_id: value })}>
                   <SelectTrigger disabled={schools.length === 0}>
                     <SelectValue placeholder={schools.length ? "Sélectionner..." : "Aucune école disponible"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {schools.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
-                      </SelectItem>
-                    ))}
+                    {schools.map((s) => (<SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
@@ -500,11 +308,8 @@ export default function TeacherRegistration() {
                             id={sid}
                             checked={checked}
                             onCheckedChange={(isChecked) => {
-                              if (isChecked) {
-                                setSelectedSubjects((prev) => [...prev, sid]);
-                              } else {
-                                setSelectedSubjects((prev) => prev.filter((v) => v !== sid));
-                              }
+                              if (isChecked) setSelectedSubjects((prev) => [...prev, sid]);
+                              else setSelectedSubjects((prev) => prev.filter((v) => v !== sid));
                             }}
                           />
                           <label htmlFor={sid} className="text-sm cursor-pointer">
@@ -527,22 +332,13 @@ export default function TeacherRegistration() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="matricule">Matricule *</Label>
-                <Input
-                  id="matricule"
-                  value={formData.matricule}
-                  onChange={(e) => setFormData({ ...formData, matricule: e.target.value })}
-                  required
-                />
+                <Input id="matricule" value={formData.matricule}
+                  onChange={(e) => setFormData({ ...formData, matricule: e.target.value })} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Téléphone *</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  required
-                />
+                <Input id="phone" type="tel" value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })} required />
               </div>
             </div>
 
@@ -550,13 +346,9 @@ export default function TeacherRegistration() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="status">Statut *</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value: Status) => setFormData({ ...formData, status: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner..." />
-                  </SelectTrigger>
+                <Select value={formData.status}
+                  onValueChange={(value: Status) => setFormData({ ...formData, status: value })}>
+                  <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="permanent">Permanent</SelectItem>
                     <SelectItem value="contract">Contractuel</SelectItem>
@@ -564,16 +356,10 @@ export default function TeacherRegistration() {
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="email">Email professionnel *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  required
-                />
+                <Input id="email" type="email" value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })} required />
               </div>
             </div>
 
@@ -581,23 +367,13 @@ export default function TeacherRegistration() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="password">Mot de passe *</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  required
-                />
+                <Input id="password" type="password" value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirm_password">Confirmer le mot de passe *</Label>
-                <Input
-                  id="confirm_password"
-                  type="password"
-                  value={formData.confirm_password}
-                  onChange={(e) => setFormData({ ...formData, confirm_password: e.target.value })}
-                  required
-                />
+                <Input id="confirm_password" type="password" value={formData.confirm_password}
+                  onChange={(e) => setFormData({ ...formData, confirm_password: e.target.value })} required />
               </div>
             </div>
 
@@ -605,48 +381,32 @@ export default function TeacherRegistration() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="birth_date">Date de naissance</Label>
-                <Input
-                  id="birth_date"
-                  type="date"
-                  value={formData.birth_date}
-                  onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })}
-                />
+                <Input id="birth_date" type="date" value={formData.birth_date}
+                  onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="birth_place">Lieu de naissance</Label>
-                <Input
-                  id="birth_place"
-                  value={formData.birth_place}
-                  onChange={(e) => setFormData({ ...formData, birth_place: e.target.value })}
-                />
+                <Input id="birth_place" value={formData.birth_place}
+                  onChange={(e) => setFormData({ ...formData, birth_place: e.target.value })} />
               </div>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="address">Adresse complète</Label>
-              <Textarea
-                id="address"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              />
+              <Textarea id="address" value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })} />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="diploma">Diplômes</Label>
-              <Input
-                id="diploma"
-                value={formData.diploma}
-                onChange={(e) => setFormData({ ...formData, diploma: e.target.value })}
-              />
+              <Input id="diploma" value={formData.diploma}
+                onChange={(e) => setFormData({ ...formData, diploma: e.target.value })} />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="qualifications">Qualifications</Label>
-              <Textarea
-                id="qualifications"
-                value={formData.qualifications}
-                onChange={(e) => setFormData({ ...formData, qualifications: e.target.value })}
-              />
+              <Textarea id="qualifications" value={formData.qualifications}
+                onChange={(e) => setFormData({ ...formData, qualifications: e.target.value })} />
             </div>
 
             <div className="flex gap-4">
