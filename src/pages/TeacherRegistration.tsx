@@ -57,19 +57,48 @@ export default function TeacherRegistration() {
   useEffect(() => { if (formData.school_id) fetchSubjects(formData.school_id); }, [formData.school_id]);
 
   const fetchSchools = async () => {
-    const { data } = await supabase.from("schools").select("*").eq("is_active", true).order("name");
-    if (data) setSchools(data);
+    const { data, error } = await supabase
+      .from("schools")
+      .select("id,name,is_active")
+      .eq("is_active", true)
+      .order("name");
+    if (error) {
+      toast({ variant: "destructive", title: "Erreur écoles", description: error.message });
+      setSchools([]);
+      return;
+    }
+    setSchools(data ?? []);
+    if ((data ?? []).length === 0) {
+      toast({
+        title: "Aucune école disponible",
+        description: "Vérifiez les droits RLS: la lecture publique des écoles actives doit être autorisée.",
+      });
+    }
   };
 
   const fetchSubjects = async (schoolId: string) => {
-    const { data } = await supabase.from("subjects").select("*").eq("school_id", schoolId).order("name");
+    const { data, error } = await supabase
+      .from("subjects")
+      .select("id,code,name,school_id")
+      .eq("school_id", schoolId)
+      .order("name");
+    if (error) {
+      toast({ variant: "destructive", title: "Erreur matières", description: error.message });
+      setSubjects([]);
+      return;
+    }
     setSubjects(data ?? []);
+    if ((data ?? []).length === 0) {
+      toast({
+        title: "Aucune matière configurée",
+        description: "Aucune matière trouvée pour cet établissement (ou accès RLS non autorisé).",
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // validations minimales
     if (!formData.first_name || !formData.last_name || !formData.gender ||
         !formData.school_id || !formData.phone || !formData.matricule || !formData.status) {
       toast({ title: "Erreur", description: "Champs obligatoires manquants.", variant: "destructive" });
@@ -107,7 +136,7 @@ export default function TeacherRegistration() {
       const user = authData.user;
       if (!user) throw new Error("Création du compte échouée.");
 
-      // 2) Insérer profil (id = user.id)
+      // 2) Profil
       const { error: profileError } = await supabase.from("profiles").insert({
         id: user.id,
         first_name: formData.first_name,
@@ -122,7 +151,7 @@ export default function TeacherRegistration() {
       });
       if (profileError) throw profileError;
 
-      // 3) Assigner le rôle teacher (lié à l’école)
+      // 3) Rôle
       const { error: roleError } = await supabase.from("user_roles").insert({
         user_id: user.id,
         role: "teacher",
@@ -130,7 +159,7 @@ export default function TeacherRegistration() {
       });
       if (roleError) throw roleError;
 
-      // 4) Enregistrement teachers (lier user_id)
+      // 4) Teacher
       const { data: teacher, error: teacherError } = await supabase
         .from("teachers")
         .insert([{
@@ -154,17 +183,17 @@ export default function TeacherRegistration() {
         .single();
       if (teacherError) throw teacherError;
 
-      // 5) matières enseignées
-      const subjectInserts = selectedSubjects.map((subjectId) => ({
+      // 5) Matières
+      const inserts = selectedSubjects.map((subjectId) => ({
         teacher_id: teacher.id,
         subject_id: subjectId,
       }));
-      const { error: subjectsError } = await supabase.from("teacher_subjects").insert(subjectInserts);
+      const { error: subjectsError } = await supabase.from("teacher_subjects").insert(inserts);
       if (subjectsError) throw subjectsError;
 
       toast({
         title: "Inscription soumise",
-        description: "Votre compte a été créé. Confirmez l’email si requis et attendez la validation par l’administration.",
+        description: "Votre compte a été créé. Confirmez l’email si requis et attendez la validation.",
       });
       navigate("/auth");
     } catch (error: any) {
@@ -216,10 +245,20 @@ export default function TeacherRegistration() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="school_id">Établissement *</Label>
-                <Select value={formData.school_id} onValueChange={(value) => setFormData({ ...formData, school_id: value })}>
-                  <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+                <Select
+                  value={formData.school_id}
+                  onValueChange={(value) => setFormData({ ...formData, school_id: value })}
+                >
+                  <SelectTrigger disabled={schools.length === 0}>
+                    <SelectValue placeholder={schools.length ? "Sélectionner..." : "Aucune école disponible"} />
+                  </SelectTrigger>
                   <SelectContent>
-                    {schools.map((s) => (<SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>))}
+                    {schools.map((s) => (
+                      // ✅ forcer des strings pour éviter un mismatch valeur/Type
+                      <SelectItem key={String(s.id)} value={String(s.id)}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -232,16 +271,17 @@ export default function TeacherRegistration() {
                 {subjects.length > 0 ? (
                   <div className="border rounded-lg p-4 space-y-2 max-h-48 overflow-y-auto">
                     {subjects.map((subject) => (
-                      <div key={subject.id} className="flex items-center space-x-2">
+                      <div key={String(subject.id)} className="flex items-center space-x-2">
                         <Checkbox
-                          id={subject.id}
-                          checked={selectedSubjects.includes(subject.id)}
+                          id={String(subject.id)}
+                          checked={selectedSubjects.includes(String(subject.id))}
                           onCheckedChange={(checked) => {
-                            if (checked) setSelectedSubjects([...selectedSubjects, subject.id]);
-                            else setSelectedSubjects(selectedSubjects.filter((id) => id !== subject.id));
+                            const sid = String(subject.id);
+                            if (checked) setSelectedSubjects([...selectedSubjects, sid]);
+                            else setSelectedSubjects(selectedSubjects.filter((id) => id !== sid));
                           }}
                         />
-                        <label htmlFor={subject.id} className="text-sm cursor-pointer">
+                        <label htmlFor={String(subject.id)} className="text-sm cursor-pointer">
                           {subject.name} ({subject.code})
                         </label>
                       </div>
