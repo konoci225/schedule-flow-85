@@ -1,4 +1,3 @@
-// src/pages/Auth.tsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,23 +13,74 @@ const Auth = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [loginData, setLoginData] = useState({ email: "", password: "" });
+  const [signupData, setSignupData] = useState({
+    email: "",
+    password: "",
+    firstName: "",
+    lastName: "",
+    phone: "",
+  });
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email: loginData.email,
         password: loginData.password,
       });
+
       if (error) throw error;
-      toast({ title: "Connexion réussie", description: "Bienvenue !" });
+
+      toast({
+        title: "Connexion réussie",
+        description: "Bienvenue !",
+      });
+
       navigate("/dashboard");
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Erreur de connexion",
         description: error.message || "Email ou mot de passe incorrect",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.signUp({
+        email: signupData.email,
+        password: signupData.password,
+        options: {
+          data: {
+            first_name: signupData.firstName,
+            last_name: signupData.lastName,
+            phone: signupData.phone,
+          },
+          emailRedirectTo: `${window.location.origin}/`,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Inscription réussie",
+        description: "Bienvenue sur EduSchedule !",
+      });
+
+      navigate("/dashboard");
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erreur d'inscription",
+        description: error.message || "Une erreur est survenue",
       });
     } finally {
       setLoading(false);
@@ -45,17 +95,16 @@ const Auth = () => {
             <School className="h-8 w-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold">EduSchedule</h1>
-          <p className="text-muted-foreground">Gérez vos emplois du temps intelligemment</p>
+          <p className="text-muted-foreground">
+            Gérez vos emplois du temps intelligemment
+          </p>
         </div>
 
         <Card className="p-6">
           <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Connexion</TabsTrigger>
-              {/* ✅ Correction: route d’inscription */}
-              <TabsTrigger value="signup" onClick={() => navigate("/register-teacher")}>
-                Inscription
-              </TabsTrigger>
+              <TabsTrigger value="signup" onClick={() => navigate("/teacher-registration")}>Inscription</TabsTrigger>
             </TabsList>
 
             <TabsContent value="login" className="space-y-4 mt-6">
