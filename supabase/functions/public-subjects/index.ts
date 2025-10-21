@@ -1,18 +1,20 @@
 // supabase/functions/public-subjects/index.ts
-// Deno Edge Function — matières d'une école
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.46.1";
 
+const ALLOWED_ORIGIN = "*";
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*", // ou restreins au domaine web
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-authorization",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Max-Age": "86400",
+  Vary: "Origin",
 };
 
 Deno.serve(async (req) => {
-  // ✅ Preflight CORS
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response("ok", { status: 200, headers: corsHeaders });
   }
 
   try {
@@ -27,7 +29,6 @@ Deno.serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 
-    // lecture body JSON { school_id: "..." }
     const body = await req.json().catch(() => ({}));
     const schoolId = body?.school_id?.toString?.();
     if (!schoolId) {
