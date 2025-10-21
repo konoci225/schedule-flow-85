@@ -1,4 +1,4 @@
-// ⬅️ On importe le client SUPABASE déjà défini par Lovable
+// ✅ Utilise le client Supabase unique généré par Lovable
 import { supabase } from "@/integrations/supabase/client";
 
 /**
