@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import { getPublicSchools, getPublicSubjectsBySchool } from "@/lib/publicData";
+import {
+  fetchPublicSchools,
+  fetchPublicSubjectsBySchool,
+  type School,
+  type Subject,
+} from "@/lib/publicApi";
 
-type School = { id: string; name: string; is_active: boolean };
-type Subject = { id: string; code: string; name: string; school_id: string };
-
-export default function RegisterTeacher() {
+export default function TeacherRegistration() {
   const [schools, setSchools] = useState<School[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedSchool, setSelectedSchool] = useState<string>("");
@@ -12,15 +14,17 @@ export default function RegisterTeacher() {
   const [loadingSubjects, setLoadingSubjects] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>("");
 
-  // 1) Charger les écoles
+  // Charger les écoles via Edge Function
   useEffect(() => {
     (async () => {
       setLoadingSchools(true);
       setErrorMsg("");
       try {
-        const s = await getPublicSchools();
+        const s = await fetchPublicSchools();
         setSchools(s);
+        console.log("[TeacherRegistration] schools:", s.length);
       } catch (e: any) {
+        console.error(e);
         setErrorMsg(e?.message ?? "Impossible de charger les établissements.");
       } finally {
         setLoadingSchools(false);
@@ -28,7 +32,7 @@ export default function RegisterTeacher() {
     })();
   }, []);
 
-  // 2) Charger les matières quand une école est choisie
+  // Charger les matières d'une école via Edge Function
   useEffect(() => {
     if (!selectedSchool) {
       setSubjects([]);
@@ -38,9 +42,11 @@ export default function RegisterTeacher() {
       setLoadingSubjects(true);
       setErrorMsg("");
       try {
-        const subs = await getPublicSubjectsBySchool(selectedSchool);
+        const subs = await fetchPublicSubjectsBySchool(selectedSchool);
         setSubjects(subs);
+        console.log("[TeacherRegistration] subjects:", subs.length);
       } catch (e: any) {
+        console.error(e);
         setErrorMsg(e?.message ?? "Impossible de charger les matières.");
       } finally {
         setLoadingSubjects(false);
@@ -92,7 +98,7 @@ export default function RegisterTeacher() {
           </select>
         </div>
 
-        {/* Matière (facultatif selon ta logique) */}
+        {/* Matière */}
         <div>
           <label className="block text-sm mb-1">Matière</label>
           <select className="w-full border rounded p-2" disabled={!selectedSchool || loadingSubjects}>
