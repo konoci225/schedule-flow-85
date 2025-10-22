@@ -27,6 +27,7 @@ export default function TeacherRegistration() {
     matricule: string;
     status: "permanent" | "contract" | "substitute" | "";
     email: string;
+    password: string;
     birth_date: string;
     birth_place: string;
     address: string;
@@ -41,6 +42,7 @@ export default function TeacherRegistration() {
     matricule: "",
     status: "",
     email: "",
+    password: "",
     birth_date: "",
     birth_place: "",
     address: "",
@@ -89,10 +91,19 @@ export default function TeacherRegistration() {
     
     if (!formData.first_name || !formData.last_name || !formData.gender || 
         !formData.school_id || !formData.phone || !formData.matricule || 
-        !formData.status) {
+        !formData.status || !formData.email || !formData.password) {
       toast({
         title: "Erreur",
         description: "Veuillez remplir tous les champs obligatoires",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      toast({
+        title: "Erreur",
+        description: "Le mot de passe doit contenir au moins 6 caractères",
         variant: "destructive",
       });
       return;
@@ -110,13 +121,41 @@ export default function TeacherRegistration() {
     setLoading(true);
 
     try {
-      // Insert teacher with type assertions
+      // Create auth account (will be disabled until approved)
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            first_name: formData.first_name,
+            last_name: formData.last_name,
+          },
+          emailRedirectTo: `${window.location.origin}/`,
+        },
+      });
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error("Erreur lors de la création du compte");
+
+      // Insert teacher with user_id
       const { data: teacher, error: teacherError } = await supabase
         .from("teachers")
         .insert([{
-          ...formData,
+          user_id: authData.user.id,
+          first_name: formData.first_name,
+          last_name: formData.last_name,
           gender: formData.gender as "male" | "female" | "other",
-          status: formData.status as "permanent" | "contract" | "substitute"
+          school_id: formData.school_id,
+          phone: formData.phone,
+          matricule: formData.matricule,
+          status: formData.status as "permanent" | "contract" | "substitute",
+          email: formData.email,
+          birth_date: formData.birth_date || null,
+          birth_place: formData.birth_place || null,
+          address: formData.address || null,
+          diploma: formData.diploma || null,
+          qualifications: formData.qualifications || null,
+          is_approved: false,
         }])
         .select()
         .single();
@@ -140,6 +179,9 @@ export default function TeacherRegistration() {
         description: "Votre demande d'inscription a été envoyée. Elle sera examinée par l'administration de l'établissement.",
       });
 
+      // Sign out the user immediately (they shouldn't be logged in until approved)
+      await supabase.auth.signOut();
+      
       navigate("/auth");
     } catch (error: any) {
       toast({
@@ -294,14 +336,27 @@ export default function TeacherRegistration() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email professionnel</Label>
+                <Label htmlFor="email">Email professionnel *</Label>
                 <Input
                   id="email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  required
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Mot de passe *</Label>
+              <Input
+                id="password"
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                placeholder="Au moins 6 caractères"
+                required
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
