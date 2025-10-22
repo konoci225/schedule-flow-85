@@ -54,23 +54,45 @@ export default function Teachers() {
   };
 
   const handleApproval = async (teacherId: string, approve: boolean) => {
-    const { error } = await supabase
-      .from("teachers")
-      .update({ is_approved: approve })
-      .eq("id", teacherId);
+    if (approve) {
+      // Use the approve_teacher function to approve and create role
+      const { error } = await supabase.rpc("approve_teacher", {
+        teacher_id_param: teacherId,
+      });
 
-    if (error) {
-      toast({
-        title: "Erreur",
-        description: error.message,
-        variant: "destructive",
-      });
+      if (error) {
+        toast({
+          title: "Erreur",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Professeur approuvé",
+          description: "Le professeur a été approuvé et peut maintenant se connecter",
+        });
+        fetchTeachers();
+      }
     } else {
-      toast({
-        title: approve ? "Professeur approuvé" : "Professeur rejeté",
-        description: `Le professeur a été ${approve ? "approuvé" : "rejeté"} avec succès`,
-      });
-      fetchTeachers();
+      // For rejection, just update the status
+      const { error } = await supabase
+        .from("teachers")
+        .update({ is_approved: false })
+        .eq("id", teacherId);
+
+      if (error) {
+        toast({
+          title: "Erreur",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Professeur rejeté",
+          description: "Le professeur a été rejeté",
+        });
+        fetchTeachers();
+      }
     }
   };
 

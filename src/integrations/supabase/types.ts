@@ -1140,6 +1140,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_teacher: {
+        Args: { teacher_id_param: string }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1147,10 +1151,7 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_super_admin: {
-        Args: { _user_id: string }
-        Returns: boolean
-      }
+      is_super_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "super_admin" | "school_admin" | "teacher"
