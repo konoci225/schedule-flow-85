@@ -21,6 +21,8 @@ import SchoolSettings from "./pages/SchoolSettings";
 import AcademicYears from "./pages/AcademicYears";
 import TimeSlots from "./pages/TimeSlots";
 import Announcements from "./pages/Announcements";
+import TeacherAvailability from "./pages/TeacherAvailability";
+import TeacherAttendance from "./pages/TeacherAttendance";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -50,6 +52,8 @@ const App = () => (
           <Route path="/academic-years" element={<AcademicYears />} />
           <Route path="/time-slots" element={<TimeSlots />} />
           <Route path="/announcements" element={<Announcements />} />
+          <Route path="/teacher-availability" element={<TeacherAvailability />} />
+          <Route path="/teacher-attendance" element={<TeacherAttendance />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

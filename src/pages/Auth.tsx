@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 
-import { Mail, Lock, School } from "lucide-react";
+import { Mail, Lock, School, ArrowLeft } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 const Auth = () => {
@@ -47,6 +47,14 @@ const Auth = () => {
   return (
     <div className="min-h-screen bg-gradient-subtle flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md space-y-8">
+        <Button
+          variant="ghost"
+          className="gap-2"
+          onClick={() => navigate("/")}
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Retour
+        </Button>
         <div className="text-center space-y-4">
           <div className="h-16 w-16 rounded-2xl bg-gradient-primary mx-auto flex items-center justify-center">
             <School className="h-8 w-8 text-white" />
